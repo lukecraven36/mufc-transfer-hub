@@ -346,12 +346,20 @@ function renderClubs() {
 }
 
 // ==================== RUMOURS ====================
+// Rumour names carry a trailing club/context suffix for display, e.g. "Éderson (Atalanta)"
+// or "Joshua Zirkzee (to Juventus)" — strip it before using the name as a photo/avatar
+// seed, otherwise the club text corrupts both the generated initials and the Wikipedia lookup.
+function rumourPlayerName(fullName) {
+  return String(fullName).replace(/\s*\([^)]*\)\s*$/, '').trim();
+}
+
 function rumourCard(r) {
+  const seed = rumourPlayerName(r.name);
   const bg = r.type === 'out' ? 'DA291C' : '00C853';
   const feeClass = r.type === 'out' ? 'fee-positive' : 'fee-negative';
   return `
     <div class="player-card rumour-target ${r.type === 'out' ? 'out' : 'in'}">
-      <img class="player-photo" data-name="${escapeAttr(r.name)}" data-bg="${bg}" src="${avatarUrl(r.name, bg)}" alt="${escapeAttr(r.name)}" loading="lazy" />
+      <img class="player-photo" data-name="${escapeAttr(seed)}" data-bg="${bg}" src="${avatarUrl(seed, bg)}" alt="${escapeAttr(r.name)}" loading="lazy" />
       <div class="player-info">
         <div class="player-name">${escapeHtml(r.name)}</div>
         <div class="player-meta">${r.type === 'out' ? 'Potential departure' : 'Linked target'}</div>
