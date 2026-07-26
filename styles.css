@@ -40,12 +40,14 @@ body {
   line-height: 1.5;
   transition: background 0.3s, color 0.3s;
 }
+.site-header {
+  position: sticky; top: 0; z-index: 100;
+}
 .header {
   background: linear-gradient(90deg, var(--mufc-red-dark) 0%, var(--mufc-red) 50%, var(--mufc-red-dark) 100%);
   padding: 1rem 1.5rem;
   display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.75rem;
   box-shadow: 0 4px 20px rgba(218,41,28,0.4);
-  position: sticky; top: 0; z-index: 100;
 }
 .logo-area { display:flex; align-items:center; gap:0.85rem; }
 .crest {
@@ -155,6 +157,7 @@ tr:hover td { background:rgba(218,41,28,0.06); }
 .player-card.loan { border-left:4px solid var(--mufc-orange); }
 .player-card { cursor:pointer; }
 .player-card:focus-visible { outline:2px solid var(--mufc-red); outline-offset:2px; }
+.player-card.rumour-target { cursor:default; }
 .player-photo {
   width:64px; height:64px; border-radius:50%; object-fit:cover; flex-shrink:0;
   border:2px solid var(--mufc-border); background:var(--mufc-dark);
@@ -180,11 +183,10 @@ tr:hover td { background:rgba(218,41,28,0.06); }
 }
 .timeline-date { font-size:0.7rem; color:var(--mufc-gold); font-weight:700; margin-bottom:0.15rem; }
 .chart-container { position:relative; height:260px; width:100%; }
-.rumour-chip {
-  display:inline-flex; align-items:center; gap:0.35rem; background:var(--input-bg);
-  border:1px dashed var(--mufc-border); padding:0.35rem 0.7rem; border-radius:6px; font-size:0.78rem; margin:0.2rem;
+.empty-state {
+  grid-column: 1 / -1; text-align:center; padding:1.75rem 1rem; color:var(--mufc-gray);
+  font-size:0.85rem; border:1px dashed var(--mufc-border); border-radius:8px;
 }
-.rumour-card { margin-top:1.25rem; }
 .footer {
   text-align:center; padding:1.75rem 1rem; color:var(--mufc-gray); font-size:0.78rem;
   border-top:1px solid var(--mufc-border); margin-top:1.75rem;

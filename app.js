@@ -346,10 +346,34 @@ function renderClubs() {
 }
 
 // ==================== RUMOURS ====================
+function rumourCard(r) {
+  const bg = r.type === 'out' ? 'DA291C' : '00C853';
+  const feeClass = r.type === 'out' ? 'fee-positive' : 'fee-negative';
+  return `
+    <div class="player-card rumour-target ${r.type === 'out' ? 'out' : 'in'}">
+      <img class="player-photo" data-name="${escapeAttr(r.name)}" data-bg="${bg}" src="${avatarUrl(r.name, bg)}" alt="${escapeAttr(r.name)}" loading="lazy" />
+      <div class="player-info">
+        <div class="player-name">${escapeHtml(r.name)}</div>
+        <div class="player-meta">${r.type === 'out' ? 'Potential departure' : 'Linked target'}</div>
+        <div class="player-fee ${feeClass}">${escapeHtml(r.fee || 'Undisclosed')}</div>
+        ${r.note ? `<div style="margin-top:0.35rem;font-size:0.7rem;color:var(--mufc-gray);">${escapeHtml(r.note)}</div>` : ''}
+        ${r.source ? `<div class="source-tag"><i class="fas fa-check-circle"></i> Source: ${escapeHtml(r.source)}</div>` : ''}
+      </div>
+    </div>`;
+}
+
+function rumourEmptyState(direction) {
+  return `<div class="empty-state">No ${direction} rumours reported yet.</div>`;
+}
+
 function renderRumours() {
-  document.getElementById('rumourList').innerHTML = rumours.map(r =>
-    `<span class="rumour-chip"><i class="fas fa-user-secret"></i> ${r.name} <small style="opacity:0.7">(${r.fee})</small></span>`
-  ).join('') + `<div style="margin-top:0.5rem;font-size:0.72rem;color:var(--mufc-gray);"><i class="fas fa-info-circle"></i> Speculative — sourced from press/agent talk, not confirmed deals.</div>`;
+  const insList = rumours.filter(r => r.type === 'in');
+  const outsList = rumours.filter(r => r.type === 'out');
+  const inGrid = document.getElementById('rumoursInGrid');
+  const outGrid = document.getElementById('rumoursOutGrid');
+  inGrid.innerHTML = insList.length ? insList.map(rumourCard).join('') : rumourEmptyState('incoming');
+  outGrid.innerHTML = outsList.length ? outsList.map(rumourCard).join('') : rumourEmptyState('outgoing');
+  [inGrid, outGrid].forEach(hydrateVisiblePhotos);
 }
 
 // ==================== SEASON AGGREGATES (derived from transfers, not hardcoded) ====================
