@@ -12,6 +12,14 @@ let totalSpend = 0, totalIncome = 0, netSpend = 0;
 let filtered = [];
 let charts = {};
 
+// ==================== LIVE STATS CONFIG ====================
+// Live stats (appearances/goals/assists) come from football-data.org via a small
+// Cloudflare Worker proxy that holds the API key privately — see stats-proxy-worker.js
+// and SETUP.md for how to sign up and deploy it. Paste your deployed Worker's URL
+// below once it's live. Leave blank to disable live stats (player cards still work,
+// falling back to the Wikipedia bio in that case).
+const STATS_PROXY_URL = 'https://mufc-stats-proxy.lukecraven36.workers.dev';
+
 // ==================== BOOT ====================
 async function boot() {
   try {
@@ -25,6 +33,7 @@ async function boot() {
   }
 
   transfers = DATA.transfers || [];
+  transfers.forEach((t, i) => { t._idx = i; });
   rumours = DATA.rumours || [];
   currentSeason = DATA.meta?.currentSeason || (transfers[0] && transfers[0].season) || "";
 
@@ -37,7 +46,6 @@ async function boot() {
   netSpend = totalSpend - totalIncome;
 
   document.getElementById('dataDate').textContent = formatDate(DATA.meta?.lastUpdated);
-  document.getElementById('windowDeadline').textContent = formatDate(DATA.meta?.windowDeadline);
 
   populateSeasonFilter();
   renderKPIs();
@@ -49,7 +57,6 @@ async function boot() {
   renderHistorySnap();
   renderSourceList();
   initCharts();
-  updatePrediction();
   bindEvents();
 }
 
@@ -155,10 +162,6 @@ function bindEvents() {
   document.getElementById('exportCsv').addEventListener('click', () => downloadCSV(toCSV(current), 'mufc-transfers-current-window.csv'));
   document.getElementById('exportFiltered').addEventListener('click', () => downloadCSV(toCSV(filtered), 'mufc-transfers-filtered.csv'));
 
-  document.getElementById('addSpend').addEventListener('input', updatePrediction);
-  document.getElementById('addIncome').addEventListener('input', updatePrediction);
-  document.getElementById('likelihood').addEventListener('input', updatePrediction);
-
   document.getElementById('shareBtn').addEventListener('click', () => {
     if (navigator.share) navigator.share({ title: 'Man Utd Transfer Dashboard', url: window.location.href });
     else copyLink();
@@ -166,6 +169,31 @@ function bindEvents() {
   document.getElementById('shareTwitterBtn').addEventListener('click', shareTwitter);
   document.getElementById('copyLinkBtn').addEventListener('click', copyLink);
   document.getElementById('shareDiscordBtn').addEventListener('click', shareDiscord);
+
+  document.querySelectorAll('.player-grid').forEach(grid => {
+    grid.addEventListener('click', e => {
+      const card = e.target.closest('.player-card');
+      if (!card) return;
+      const idx = Number(card.dataset.transferIdx);
+      if (!Number.isNaN(idx) && transfers[idx]) openPlayerModal(transfers[idx]);
+    });
+    grid.addEventListener('keydown', e => {
+      if (e.key !== 'Enter' && e.key !== ' ') return;
+      const card = e.target.closest('.player-card');
+      if (!card) return;
+      e.preventDefault();
+      const idx = Number(card.dataset.transferIdx);
+      if (!Number.isNaN(idx) && transfers[idx]) openPlayerModal(transfers[idx]);
+    });
+  });
+
+  document.getElementById('modalCloseBtn').addEventListener('click', closePlayerModal);
+  document.getElementById('playerModalOverlay').addEventListener('click', e => {
+    if (e.target.id === 'playerModalOverlay') closePlayerModal();
+  });
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape') closePlayerModal();
+  });
 }
 
 // ==================== KPI ====================
@@ -189,7 +217,7 @@ function playerCard(t) {
   const bg = t.type === 'in' ? '00C853' : (t.type === 'out' ? 'DA291C' : 'FF9100');
   const seed = t.photoSeed || t.player;
   return `
-    <div class="player-card ${t.type}">
+    <div class="player-card ${t.type}" data-transfer-idx="${t._idx}" tabindex="0" role="button" aria-haspopup="dialog">
       <img class="player-photo" data-name="${escapeAttr(seed)}" data-bg="${bg}" src="${avatarUrl(seed, bg)}" alt="${escapeAttr(t.player)}" loading="lazy" />
       <div class="player-info">
         <div class="player-name">${t.player}</div>
@@ -417,19 +445,215 @@ function initCharts() {
   });
 }
 
-// ==================== PREDICTION ====================
-function updatePrediction() {
-  const addSpend = +document.getElementById('addSpend').value;
-  const addIncome = +document.getElementById('addIncome').value;
-  const likelihood = +document.getElementById('likelihood').value / 100;
-  document.getElementById('addSpendVal').textContent = addSpend;
-  document.getElementById('addIncomeVal').textContent = addIncome;
-  document.getElementById('likelihoodVal').textContent = Math.round(likelihood * 100);
-  const projAdd = Math.round((addSpend - addIncome) * likelihood);
-  const total = netSpend + projAdd;
-  document.getElementById('currentNet').textContent = `£${netSpend}m`;
-  document.getElementById('projAdd').textContent = (projAdd >= 0 ? '+' : '') + `£${projAdd}m`;
-  document.getElementById('totalProj').textContent = `£${total}m`;
+// ==================== PLAYER DETAIL MODAL + LIVE STATS ====================
+// Live stats come from football-data.org (free tier) via a Cloudflare Worker proxy
+// that holds the API key privately (see stats-proxy-worker.js). We can only reliably
+// resolve a football-data.org player id for players currently in Manchester United's
+// registered squad (that's the only "search" the free tier gives us — there's no
+// name-search endpoint). Anyone we can't match — most "Outs" and historical loans —
+// falls back to the Wikipedia bio we already fetch for photos, with a note explaining why.
+
+function escapeHtml(str) {
+  return String(str ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+}
+
+function normalizeName(str) {
+  return String(str || '')
+    .normalize('NFD').replace(new RegExp('[̀-ͯ]', 'g'), '') // strip accents
+    .toLowerCase().replace(/[^a-z0-9\s]/g, '').trim();
+}
+
+const SQUAD_CACHE_KEY = 'mufc-squad-cache-v1';
+const SQUAD_CACHE_TTL_MS = 24 * 60 * 60 * 1000; // 1 day
+const PERSON_CACHE_KEY = 'mufc-person-cache-v1';
+const PERSON_CACHE_TTL_MS = 6 * 60 * 60 * 1000; // 6 hours
+const WIKI_SUMMARY_CACHE_KEY = 'mufc-wiki-summary-cache-v1';
+const WIKI_SUMMARY_CACHE_TTL_MS = 30 * 24 * 60 * 60 * 1000; // 30 days
+
+let squadPromise = null;
+function getUnitedSquad() {
+  if (!STATS_PROXY_URL) return Promise.resolve(null);
+  if (squadPromise) return squadPromise;
+  squadPromise = (async () => {
+    try {
+      const raw = localStorage.getItem(SQUAD_CACHE_KEY);
+      if (raw) {
+        const cached = JSON.parse(raw);
+        if (Date.now() - cached.ts < SQUAD_CACHE_TTL_MS) return cached.squad;
+      }
+    } catch { /* ignore bad cache */ }
+    try {
+      const res = await fetch(`${STATS_PROXY_URL}/team-squad`);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const json = await res.json();
+      const squad = json.squad || [];
+      try { localStorage.setItem(SQUAD_CACHE_KEY, JSON.stringify({ squad, ts: Date.now() })); } catch { /* quota */ }
+      return squad;
+    } catch {
+      return null; // proxy unreachable / not deployed yet / rate-limited
+    }
+  })();
+  return squadPromise;
+}
+
+function findSquadMatch(t, squad) {
+  if (!squad || !squad.length) return null;
+  const target = normalizeName(t.photoSeed || t.player);
+  let match = squad.find(p => normalizeName(p.name) === target);
+  if (match) return match;
+  const targetLast = target.split(' ').pop();
+  const lastNameMatches = squad.filter(p => normalizeName(p.lastName || '').split(' ').pop() === targetLast);
+  return lastNameMatches.length === 1 ? lastNameMatches[0] : null;
+}
+
+async function fetchPersonBundle(personId) {
+  let cache;
+  try { cache = JSON.parse(localStorage.getItem(PERSON_CACHE_KEY)) || {}; } catch { cache = {}; }
+  const cached = cache[personId];
+  if (cached && (Date.now() - cached.ts) < PERSON_CACHE_TTL_MS) return cached.bundle;
+
+  try {
+    const startYear = 2000 + parseInt(String(currentSeason).split('/')[0], 10);
+    const dateFrom = !isNaN(startYear) ? `${startYear}-07-01` : '';
+    const today = new Date().toISOString().slice(0, 10);
+    const matchesQS = dateFrom ? `?dateFrom=${dateFrom}&dateTo=${today}&limit=100` : '?limit=50';
+    const [personRes, matchesRes] = await Promise.all([
+      fetch(`${STATS_PROXY_URL}/person/${personId}`),
+      fetch(`${STATS_PROXY_URL}/person/${personId}/matches${matchesQS}`)
+    ]);
+    if (!personRes.ok) throw new Error(`HTTP ${personRes.status}`);
+    const person = await personRes.json();
+    let aggregations = null;
+    if (matchesRes.ok) {
+      const matchesJson = await matchesRes.json();
+      // Free tier returns aggregations as an explanatory string ("...only available
+      // for paid subscriptions") instead of the stats object — treat that as absent.
+      const aggRaw = matchesJson.aggregations;
+      aggregations = (aggRaw && typeof aggRaw === 'object') ? aggRaw : null;
+    }
+    const bundle = { person, aggregations };
+    cache[personId] = { bundle, ts: Date.now() };
+    try { localStorage.setItem(PERSON_CACHE_KEY, JSON.stringify(cache)); } catch { /* quota */ }
+    return bundle;
+  } catch {
+    return null;
+  }
+}
+
+async function fetchWikipediaSummary(name) {
+  let cache;
+  try { cache = JSON.parse(localStorage.getItem(WIKI_SUMMARY_CACHE_KEY)) || {}; } catch { cache = {}; }
+  const cached = cache[name];
+  if (cached && (Date.now() - cached.ts) < WIKI_SUMMARY_CACHE_TTL_MS) return cached.data;
+
+  const candidates = [name, `${name} (footballer)`];
+  for (const title of candidates) {
+    try {
+      const res = await fetch(`https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(title)}`, {
+        headers: { 'Accept': 'application/json' }
+      });
+      if (!res.ok) continue;
+      const json = await res.json();
+      if (json.type === 'disambiguation') continue;
+      const data = { extract: json.extract || '', pageUrl: json.content_urls?.desktop?.page || null };
+      cache[name] = { data, ts: Date.now() };
+      try { localStorage.setItem(WIKI_SUMMARY_CACHE_KEY, JSON.stringify(cache)); } catch { /* quota */ }
+      return data;
+    } catch { /* try next candidate */ }
+  }
+  const data = { extract: '', pageUrl: null };
+  cache[name] = { data, ts: Date.now() };
+  try { localStorage.setItem(WIKI_SUMMARY_CACHE_KEY, JSON.stringify(cache)); } catch { /* quota */ }
+  return data;
+}
+
+function transferDetailsHTML(t) {
+  const feeText = t.fee === 0
+    ? (t.status.toLowerCase().includes('free') || t.status.toLowerCase().includes('released') ? 'Free' : 'Loan')
+    : `£${t.fee}m${t.feeMax > t.fee ? `–${t.feeMax}m` : ''}`;
+  return `
+    <div class="modal-section-title">Transfer Details</div>
+    <div class="modal-transfer-row"><span class="club-tag">${escapeHtml(t.from)}</span><span class="arrow">→</span><span class="club-tag">${escapeHtml(t.to)}</span></div>
+    <div class="modal-transfer-row">${escapeHtml(t.season)} · ${escapeHtml(t.date)} · ${escapeHtml(t.status)} · <strong>${feeText}</strong></div>
+    ${t.notes ? `<div class="modal-transfer-row" style="color:var(--mufc-gray);font-size:0.82rem;">${escapeHtml(t.notes)}</div>` : ''}
+    ${t.source ? `<div class="source-tag"><i class="fas fa-check-circle"></i> Source: ${escapeHtml(t.source)}</div>` : ''}
+  `;
+}
+
+function liveStatsHTML(bundle) {
+  const person = bundle.person || {};
+  const a = bundle.aggregations;
+  const statBoxes = a ? `
+    <div class="modal-stats-grid">
+      <div class="modal-stat-box"><div class="n">${a.matchesOnPitch ?? 0}</div><div class="l">Appearances</div></div>
+      <div class="modal-stat-box"><div class="n">${a.goals ?? 0}</div><div class="l">Goals</div></div>
+      <div class="modal-stat-box"><div class="n">${a.assists ?? 0}</div><div class="l">Assists</div></div>
+      <div class="modal-stat-box"><div class="n">${a.minutesPlayed ?? 0}</div><div class="l">Minutes</div></div>
+      <div class="modal-stat-box"><div class="n">${a.yellowCards ?? 0}</div><div class="l">Yellow Cards</div></div>
+      <div class="modal-stat-box"><div class="n">${a.redCards ?? 0}</div><div class="l">Red Cards</div></div>
+    </div>` : `<div class="modal-fallback-note"><i class="fas fa-circle-info"></i> Matched this player on football-data.org, but detailed match stats aren't available on the free API tier — showing bio info instead.</div>`;
+  const contractUntil = person.currentTeam?.contract?.until;
+  return `
+    <div class="modal-section-title">Live Stats — ${escapeHtml(currentSeason)} (football-data.org)</div>
+    ${statBoxes}
+    <div class="modal-transfer-row" style="margin-top:0.6rem;font-size:0.78rem;color:var(--mufc-gray);">
+      ${escapeHtml(person.position || '')}${person.nationality ? ` · ${escapeHtml(person.nationality)}` : ''}${person.shirtNumber ? ` · #${person.shirtNumber}` : ''}${contractUntil ? ` · Contract until ${escapeHtml(contractUntil)}` : ''}
+    </div>
+  `;
+}
+
+function fallbackBioHTML(bio, note) {
+  return `
+    <div class="modal-fallback-note"><i class="fas fa-circle-info"></i> ${note}</div>
+    ${bio && bio.extract ? `<div class="modal-section-title">Background</div><div class="modal-bio">${escapeHtml(bio.extract)}${bio.pageUrl ? ` <a href="${bio.pageUrl}" target="_blank" rel="noopener">Read more on Wikipedia</a>` : ''}</div>` : ''}
+  `;
+}
+
+async function renderLiveStatsSection(t, container) {
+  if (STATS_PROXY_URL) {
+    const squad = await getUnitedSquad();
+    const match = findSquadMatch(t, squad);
+    if (match) {
+      const bundle = await fetchPersonBundle(match.id);
+      if (bundle) {
+        container.innerHTML = liveStatsHTML(bundle);
+        return;
+      }
+    }
+  }
+  const bio = await fetchWikipediaSummary(t.photoSeed || t.player);
+  const note = STATS_PROXY_URL
+    ? 'Live stats aren\'t available for this player (only tracked while registered to Manchester United\'s current squad on football-data.org).'
+    : 'Live stats aren\'t set up yet — showing the Wikipedia bio instead.';
+  container.innerHTML = fallbackBioHTML(bio, note);
+}
+
+function openPlayerModal(t) {
+  const seed = t.photoSeed || t.player;
+  const bg = t.type === 'in' ? '00C853' : (t.type === 'out' ? 'DA291C' : 'FF9100');
+  const content = document.getElementById('playerModalContent');
+  content.innerHTML = `
+    <div class="modal-header">
+      <img class="modal-photo" id="modalPlayerPhoto" data-name="${escapeAttr(seed)}" data-bg="${bg}" src="${avatarUrl(seed, bg)}" alt="${escapeAttr(t.player)}" />
+      <div>
+        <div class="modal-name" id="modalPlayerName">${escapeHtml(t.player)}</div>
+        <div class="modal-subtitle">${escapeHtml(t.position)} · Age ${t.age ?? '—'}</div>
+      </div>
+    </div>
+    ${transferDetailsHTML(t)}
+    <div id="modalLiveStats"><div class="modal-loading"><i class="fas fa-spinner fa-spin"></i> Checking for live stats…</div></div>
+  `;
+  hydratePhoto(document.getElementById('modalPlayerPhoto'));
+
+  const overlay = document.getElementById('playerModalOverlay');
+  overlay.classList.add('show');
+  document.getElementById('modalCloseBtn').focus();
+
+  renderLiveStatsSection(t, document.getElementById('modalLiveStats'));
+}
+
+function closePlayerModal() {
+  document.getElementById('playerModalOverlay').classList.remove('show');
 }
 
 // ==================== SHARE ====================

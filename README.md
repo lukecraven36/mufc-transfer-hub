@@ -6,8 +6,9 @@
 
 - `index.html` — page structure + meta tags (edit copy/branding here)
 - `styles.css` — all styling (Man Utd red/gold/black theme, dark/light mode)
-- `app.js` — all logic: rendering, filters, charts, CSV export, predictions, photo lookup
+- `app.js` — all logic: rendering, filters, charts, CSV export, player detail modal, photo/stats lookup
 - `data.json` — **the only file you need to touch to update transfer data**
+- `stats-proxy-worker.js` / `SETUP.md` — optional Cloudflare Worker + walkthrough for the live player-stats feature (see below)
 
 Splitting these out means you can update a transfer by editing one array entry in `data.json` and everything else — KPI cards, charts, history trend, CSV export — recalculates automatically. No hardcoded totals to keep in sync.
 
@@ -34,6 +35,15 @@ Update `rumours` for the speculative-targets panel — keep these clearly framed
 Fees and deal details are compiled from public reporting: Sky Sports, BBC Sport, ESPN, The Athletic, United In Focus, and club statements (manutd.com). Transfer fees are not officially published by the Premier League or the clubs involved, so reputable football-media reporting is the standard source for this kind of data — figures can be revised as outlets update their reporting. Each transfer's `source` field and the footer source list exist so readers can trace a figure back to its origin.
 
 Player photos are fetched at runtime from Wikipedia's public REST API (freely licensed images, no key required) and automatically fall back to a generated initials avatar if no photo is found — so the app never breaks or needs manual image hosting.
+
+## Player detail modal & live stats
+
+Clicking any player card opens a modal with the full transfer details plus,
+where available, live season stats (appearances/goals/assists/cards) sourced
+from football-data.org. That requires a small Cloudflare Worker to keep the
+API key off the public page — it's optional and off by default. See
+[SETUP.md](SETUP.md) for the full walkthrough; without it, cards still open
+and show the Wikipedia bio instead.
 
 ## Running locally
 
