@@ -146,6 +146,7 @@ tr:hover td { background:rgba(218,41,28,0.06); }
 .club-tag { background:var(--input-bg); padding:0.12rem 0.45rem; border-radius:4px; font-size:0.78rem; }
 .source-tag { font-size:0.68rem; color:var(--mufc-gray); }
 .player-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(270px,1fr)); gap:0.9rem; }
+#rumoursInGrid, #rumoursOutGrid { grid-template-columns: 1fr; }
 .player-card {
   background:linear-gradient(145deg, var(--card-bg) 0%, color-mix(in srgb, var(--card-bg) 85%, #DA291C) 100%);
   border:1px solid var(--mufc-border); border-radius:var(--radius); padding:1rem;
