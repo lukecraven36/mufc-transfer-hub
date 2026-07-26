@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Manchester United Transfer Hub | MUFC Ins, Outs, Loans & Predictions</title>
+  <meta name="description" content="Interactive Manchester United transfer dashboard with multi-season history, filters, CSV export, dark/light mode, prediction modelling and share tools." />
+
+  <!-- Open Graph / Twitter card so links look good when shared on X -->
+  <meta property="og:title" content="Manchester United Transfer Hub" />
+  <meta property="og:description" content="Interactive MUFC transfer dashboard — ins, outs, loans, spend/income and predictions." />
+  <meta property="og:type" content="website" />
+  <meta name="twitter:card" content="summary" />
+  <meta name="twitter:title" content="Manchester United Transfer Hub" />
+  <meta name="twitter:description" content="Interactive MUFC transfer dashboard — ins, outs, loans, spend/income and predictions." />
+
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🔴</text></svg>" />
+  <link rel="stylesheet" href="styles.css" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+</head>
+<body>
+  <header class="header">
+    <div class="logo-area">
+      <div class="crest">👹</div>
+      <div>
+        <h1>Manchester United <span>Transfer Hub</span></h1>
+        <div style="font-size:0.75rem;opacity:0.9;color:#fff;">Multi-Season Transfer History &amp; Predictions</div>
+      </div>
+    </div>
+    <div class="header-meta">
+      <div class="live-badge"><i class="fas fa-database"></i> Data updated <span id="dataDate">—</span></div>
+      <button class="theme-btn" id="themeToggle" title="Toggle theme"><i class="fas fa-moon"></i> <span>Dark</span></button>
+      <button class="export-btn" id="exportCsv" title="Export current window"><i class="fas fa-file-csv"></i> CSV</button>
+      <button class="share-btn" id="shareBtn" title="Share dashboard"><i class="fas fa-share-alt"></i> Share</button>
+    </div>
+  </header>
+
+  <nav class="nav">
+    <button class="nav-btn active" data-section="overview"><i class="fas fa-tachometer-alt"></i> Overview</button>
+    <button class="nav-btn" data-section="all"><i class="fas fa-list"></i> All Transfers</button>
+    <button class="nav-btn" data-section="ins"><i class="fas fa-arrow-down"></i> Ins</button>
+    <button class="nav-btn" data-section="outs"><i class="fas fa-arrow-up"></i> Outs</button>
+    <button class="nav-btn" data-section="loans"><i class="fas fa-exchange-alt"></i> Loans</button>
+    <button class="nav-btn" data-section="clubs"><i class="fas fa-building"></i> Clubs</button>
+    <button class="nav-btn" data-section="predict"><i class="fas fa-crystal-ball"></i> Predictions</button>
+    <button class="nav-btn" data-section="history"><i class="fas fa-history"></i> History</button>
+  </nav>
+
+  <main class="main">
+    <div class="disclaimer">
+      <i class="fas fa-info-circle"></i>
+      <strong>Disclaimer:</strong> Fees compiled from public reporting (Sky Sports, BBC Sport, ESPN, The Athletic, club statements) — see sources below each deal and in the History tab. Add-ons and final accounting may differ from reported figures. Fan-built visualisation — not official, and not affiliated with Manchester United FC or INEOS.
+    </div>
+
+    <!-- OVERVIEW -->
+    <section id="overview" class="section active">
+      <div class="kpi-grid" id="kpiGrid"></div>
+      <div class="grid-2">
+        <div class="card">
+          <div class="card-header"><div class="card-title"><i class="fas fa-chart-pie" style="color:var(--mufc-red)"></i> Spend vs Income</div></div>
+          <div class="chart-container"><canvas id="spendChart"></canvas></div>
+        </div>
+        <div class="card">
+          <div class="card-header"><div class="card-title"><i class="fas fa-chart-bar" style="color:var(--mufc-red)"></i> Fee by Player</div></div>
+          <div class="chart-container"><canvas id="feeBarChart"></canvas></div>
+        </div>
+      </div>
+      <div class="card" style="margin-bottom:1.25rem;">
+        <div class="card-header"><div class="card-title"><i class="fas fa-stream" style="color:var(--mufc-red)"></i> Activity Timeline</div></div>
+        <div class="timeline" id="timeline"></div>
+      </div>
+      <div class="section-title"><i class="fas fa-star"></i> Headline Moves</div>
+      <div class="player-grid" id="headlineMoves"></div>
+    </section>
+
+    <!-- ALL TRANSFERS (filterable master) -->
+    <section id="all" class="section">
+      <div class="section-title"><i class="fas fa-list"></i> All Transfers — Filterable</div>
+      <div class="filters">
+        <input type="text" class="search-input" id="searchAll" placeholder="Search player or club..." />
+        <select class="select-input" id="filterType">
+          <option value="all">All Types</option>
+          <option value="in">Ins only</option>
+          <option value="out">Outs only</option>
+          <option value="loan">Loans only</option>
+        </select>
+        <select class="select-input" id="filterSeason">
+          <option value="all">All Seasons</option>
+        </select>
+        <select class="select-input" id="filterFee">
+          <option value="all">Any Fee</option>
+          <option value="paid">Paid only</option>
+          <option value="free">Free / Released</option>
+          <option value="big">£30m+</option>
+        </select>
+        <button class="filter-btn" id="resetFilters"><i class="fas fa-undo"></i> Reset</button>
+        <button class="export-btn" id="exportFiltered" style="margin-left:auto;"><i class="fas fa-download"></i> Export Filtered CSV</button>
+      </div>
+      <div class="card">
+        <div class="table-wrap">
+          <table id="masterTable">
+            <thead>
+              <tr>
+                <th data-sort="season">Season</th>
+                <th data-sort="player">Player</th>
+                <th data-sort="type">Type</th>
+                <th data-sort="position">Pos</th>
+                <th data-sort="age">Age</th>
+                <th data-sort="from">From</th>
+                <th data-sort="to">To</th>
+                <th data-sort="fee">Fee (£m)</th>
+                <th>Status</th>
+                <th>Source</th>
+              </tr>
+            </thead>
+            <tbody id="masterBody"></tbody>
+          </table>
+        </div>
+        <div style="margin-top:0.6rem;font-size:0.75rem;color:var(--mufc-gray);" id="filterCount"></div>
+      </div>
+    </section>
+
+    <!-- INS -->
+    <section id="ins" class="section">
+      <div class="section-title"><i class="fas fa-arrow-down"></i> Arrivals (Ins) — Current Window</div>
+      <div class="player-grid" id="insGrid"></div>
+    </section>
+
+    <!-- OUTS -->
+    <section id="outs" class="section">
+      <div class="section-title"><i class="fas fa-arrow-up"></i> Departures (Outs) — Current Window</div>
+      <div class="player-grid" id="outsGrid"></div>
+    </section>
+
+    <!-- LOANS -->
+    <section id="loans" class="section">
+      <div class="section-title"><i class="fas fa-exchange-alt"></i> Loan Activity</div>
+      <div class="player-grid" id="loansGrid"></div>
+      <div class="card" style="margin-top:1.1rem;">
+        <p style="color:var(--mufc-gray);font-size:0.85rem;">
+          Focus here is active outgoing loans and permanent conversions of previous loans. See the All Transfers tab for the full historical record.
+        </p>
+      </div>
+    </section>
+
+    <!-- CLUBS -->
+    <section id="clubs" class="section">
+      <div class="section-title"><i class="fas fa-building"></i> Clubs Involved</div>
+      <div class="grid-2">
+        <div class="card">
+          <div class="card-header"><div class="card-title">Clubs United Bought From</div></div>
+          <div class="club-list" id="clubsFrom"></div>
+        </div>
+        <div class="card">
+          <div class="card-header"><div class="card-title">Clubs United Sold / Loaned To</div></div>
+          <div class="club-list" id="clubsTo"></div>
+        </div>
+      </div>
+      <div class="card" style="margin-top:1.1rem;">
+        <div class="card-header"><div class="card-title"><i class="fas fa-chart-bar"></i> Transfer Volume by Club (£m)</div></div>
+        <div class="chart-container" style="height:300px;"><canvas id="clubChart"></canvas></div>
+      </div>
+    </section>
+
+    <!-- PREDICT -->
+    <section id="predict" class="section">
+      <div class="section-title"><i class="fas fa-crystal-ball"></i> Predicted Spend &amp; Income + Targets</div>
+      <div class="predict-panel">
+        <p style="margin-bottom:1.1rem;color:var(--mufc-gray);font-size:0.85rem;">
+          Model additional deals before the <strong id="windowDeadline">—</strong> deadline. This is a fan-made "what-if" calculator, not a forecast from a data model — likelihood simply weights the extra figures you enter.
+        </p>
+        <div class="slider-group">
+          <div class="slider-label"><span><i class="fas fa-arrow-down" style="color:var(--mufc-green)"></i> Additional Spend (£m)</span><span id="addSpendVal">35</span></div>
+          <input type="range" id="addSpend" min="0" max="120" value="35" step="5" />
+        </div>
+        <div class="slider-group">
+          <div class="slider-label"><span><i class="fas fa-arrow-up" style="color:var(--mufc-red-light)"></i> Additional Income (£m)</span><span id="addIncomeVal">25</span></div>
+          <input type="range" id="addIncome" min="0" max="80" value="25" step="5" />
+        </div>
+        <div class="slider-group">
+          <div class="slider-label"><span><i class="fas fa-percentage" style="color:var(--mufc-gold)"></i> Likelihood (%)</span><span id="likelihoodVal">55</span></div>
+          <input type="range" id="likelihood" min="10" max="100" value="55" step="5" />
+        </div>
+        <div class="predict-result">
+          <div class="predict-box"><div class="label">Current Net Spend</div><div class="value" id="currentNet" style="color:var(--mufc-orange)">—</div></div>
+          <div class="predict-box"><div class="label">Projected Additional Net</div><div class="value" id="projAdd" style="color:var(--mufc-red-light)">—</div></div>
+          <div class="predict-box"><div class="label">Total Projected Net</div><div class="value" id="totalProj" style="color:var(--mufc-gold)">—</div></div>
+        </div>
+        <div style="margin-top:1.35rem;">
+          <div style="font-weight:700;margin-bottom:0.5rem;font-size:0.9rem;">Linked / Rumoured Targets</div>
+          <div id="rumourList"></div>
+        </div>
+        <div style="margin-top:1.1rem;padding:0.85rem;background:var(--input-bg);border-radius:8px;font-size:0.8rem;color:var(--mufc-gray);">
+          <strong style="color:var(--text)">Notes:</strong> Real outcomes depend on negotiations, PSR headroom and club strategy. Update <code>rumours</code> in data.json as links develop.
+        </div>
+      </div>
+    </section>
+
+    <!-- HISTORY -->
+    <section id="history" class="section">
+      <div class="section-title"><i class="fas fa-history"></i> Multi-Season Comparison</div>
+      <div class="grid-2">
+        <div class="card">
+          <div class="card-header"><div class="card-title">Net Spend Trend (£m, guaranteed fees)</div></div>
+          <div class="chart-container"><canvas id="historyChart"></canvas></div>
+        </div>
+        <div class="card">
+          <div class="card-header"><div class="card-title">Window Snapshots</div></div>
+          <div style="font-size:0.85rem;" id="historySnap"></div>
+        </div>
+      </div>
+      <div class="card" style="margin-top:1.1rem;">
+        <div class="card-header"><div class="card-title"><i class="fas fa-chart-pie"></i> Position Breakdown (current window deals)</div></div>
+        <div class="chart-container"><canvas id="posChart"></canvas></div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <p>Built for Manchester United fans • Not affiliated with Manchester United FC or INEOS</p>
+    <p style="margin-top:0.4rem;">Sources: <span id="sourceList"></span></p>
+    <div class="share-bar" style="justify-content:center;">
+      <button class="share-btn" id="shareTwitterBtn"><i class="fab fa-x-twitter"></i> Post</button>
+      <button class="share-btn" id="copyLinkBtn"><i class="fas fa-link"></i> Copy Link</button>
+      <button class="share-btn" id="shareDiscordBtn"><i class="fab fa-discord"></i> Discord</button>
+    </div>
+  </footer>
+
+  <div class="toast" id="toast"></div>
+
+  <script src="app.js"></script>
+</body>
+</html>

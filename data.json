@@ -1,0 +1,49 @@
+{
+  "meta": {
+    "lastUpdated": "2026-07-26",
+    "currentSeason": "26/27",
+    "windowDeadline": "2026-09-01",
+    "note": "Fees are guaranteed/base amounts unless noted; feeMax includes reported add-ons where disclosed. Figures compiled from public reporting and may be revised as outlets update details.",
+    "sourceList": [
+      { "name": "Sky Sports", "url": "https://www.skysports.com/football" },
+      { "name": "BBC Sport", "url": "https://www.bbc.co.uk/sport/football" },
+      { "name": "ESPN", "url": "https://www.espn.com/soccer/" },
+      { "name": "The Athletic", "url": "https://theathletic.com/" },
+      { "name": "Manchester United (official)", "url": "https://www.manutd.com/en/news" },
+      { "name": "United In Focus", "url": "https://www.unitedinfocus.com/" }
+    ]
+  },
+  "transfers": [
+    { "season":"26/27", "player":"Andrey Santos", "type":"in", "position":"CM", "age":22, "from":"Chelsea", "to":"Manchester United", "fee":48, "feeMax":48, "status":"Permanent", "date":"Jul 2026", "notes":"Contract to 2031, option for further year", "photoSeed":"Andrey Santos", "source":"ESPN" },
+    { "season":"26/27", "player":"Youri Tielemans", "type":"in", "position":"CM", "age":29, "from":"Aston Villa", "to":"Manchester United", "fee":35, "feeMax":35, "status":"Permanent", "date":"Jul 2026", "notes":"5-year deal", "photoSeed":"Youri Tielemans", "source":"ESPN" },
+    { "season":"26/27", "player":"Tynan Thompson", "type":"in", "position":"Winger", "age":18, "from":"Tottenham Hotspur", "to":"Manchester United", "fee":4, "feeMax":8, "status":"Permanent", "date":"Jul 2026", "notes":"£4m guaranteed + £4m add-ons", "photoSeed":"Tynan Thompson", "source":"United In Focus" },
+    { "season":"26/27", "player":"Karl Darlow", "type":"in", "position":"GK", "age":35, "from":"Leeds United", "to":"Manchester United", "fee":0, "feeMax":0, "status":"Free", "date":"Jul 2026", "notes":"Free transfer, goalkeeping cover", "photoSeed":"Karl Darlow", "source":"Manchester United (official)" },
+    { "season":"26/27", "player":"Rasmus Højlund", "type":"out", "position":"CF", "age":23, "from":"Manchester United", "to":"Napoli", "fee":38, "feeMax":38, "status":"Permanent", "date":"Jun 2026", "notes":"Release clause triggered after loan spell", "photoSeed":"Rasmus Hojlund", "source":"Sky Sports" },
+    { "season":"26/27", "player":"Casemiro", "type":"out", "position":"DM", "age":34, "from":"Manchester United", "to":"Free Agent", "fee":0, "feeMax":0, "status":"Released", "date":"Jun 2026", "notes":"Contract expired", "photoSeed":"Casemiro", "source":"United In Focus" },
+    { "season":"26/27", "player":"Jadon Sancho", "type":"out", "position":"LW", "age":26, "from":"Manchester United", "to":"Free Agent", "fee":0, "feeMax":0, "status":"Released", "date":"Jun 2026", "notes":"Contract expired after loan spell at Aston Villa", "photoSeed":"Jadon Sancho", "source":"United In Focus" },
+    { "season":"26/27", "player":"Tyrell Malacia", "type":"out", "position":"LB", "age":26, "from":"Manchester United", "to":"Free Agent", "fee":0, "feeMax":0, "status":"Released", "date":"Jun 2026", "notes":"Contract expired", "photoSeed":"Tyrell Malacia", "source":"United In Focus" },
+    { "season":"26/27", "player":"André Onana", "type":"loan", "position":"GK", "age":30, "from":"Manchester United", "to":"Trabzonspor", "fee":0, "feeMax":0, "status":"Loan (2nd yr)", "date":"Jul 2026", "notes":"Season-long loan extended, no buy option", "photoSeed":"Andre Onana", "source":"beIN Sports" },
+    { "season":"26/27", "player":"Solomon Honor", "type":"loan", "position":"GK", "age":20, "from":"Manchester United", "to":"Southport", "fee":0, "feeMax":0, "status":"Loan", "date":"Jul 2026", "notes":"Season-long loan, National League North", "photoSeed":"Solomon Honor", "source":"Manchester United (official)" },
+
+    { "season":"25/26", "player":"Benjamin Šeško", "type":"in", "position":"CF", "age":22, "from":"RB Leipzig", "to":"Manchester United", "fee":65, "feeMax":73.3, "status":"Permanent", "date":"Aug 2025", "notes":"£65m guaranteed, rising to £73.3m with add-ons", "photoSeed":"Benjamin Sesko", "source":"Sky Sports" },
+    { "season":"25/26", "player":"Bryan Mbeumo", "type":"in", "position":"RW", "age":25, "from":"Brentford", "to":"Manchester United", "fee":65, "feeMax":71, "status":"Permanent", "date":"Jul 2025", "notes":"£65m plus £6m add-ons", "photoSeed":"Bryan Mbeumo", "source":"Sky Sports" },
+    { "season":"25/26", "player":"Matheus Cunha", "type":"in", "position":"CF/AM", "age":26, "from":"Wolves", "to":"Manchester United", "fee":62.5, "feeMax":62.5, "status":"Permanent", "date":"Jul 2025", "notes":"Release clause fee", "photoSeed":"Matheus Cunha", "source":"Sky Sports" },
+    { "season":"25/26", "player":"Senne Lammens", "type":"in", "position":"GK", "age":23, "from":"Royal Antwerp", "to":"Manchester United", "fee":18.2, "feeMax":18.2, "status":"Permanent", "date":"Sep 2025", "notes":"Deadline-day signing, 5-year deal", "photoSeed":"Senne Lammens", "source":"Sky Sports" },
+    { "season":"25/26", "player":"Alejandro Garnacho", "type":"out", "position":"LW", "age":21, "from":"Manchester United", "to":"Chelsea", "fee":40, "feeMax":40, "status":"Permanent", "date":"Sep 2025", "notes":"Fixed fee", "photoSeed":"Alejandro Garnacho", "source":"ESPN" },
+    { "season":"25/26", "player":"Antony", "type":"out", "position":"RW", "age":25, "from":"Manchester United", "to":"Real Betis", "fee":19, "feeMax":21.6, "status":"Permanent", "date":"Sep 2025", "notes":"£19m guaranteed + £2.6m add-ons", "photoSeed":"Antony", "source":"Sky Sports" },
+    { "season":"25/26", "player":"Rasmus Højlund", "type":"loan", "position":"CF", "age":22, "from":"Manchester United", "to":"Napoli", "fee":6, "feeMax":6, "status":"Loan", "date":"Sep 2025", "notes":"Season-long loan with buy clause; later made permanent", "photoSeed":"Rasmus Hojlund", "source":"BBC Sport" },
+    { "season":"25/26", "player":"Marcus Rashford", "type":"loan", "position":"LW", "age":27, "from":"Manchester United", "to":"Barcelona", "fee":0, "feeMax":0, "status":"Loan", "date":"Aug 2025", "notes":"Season-long loan, no obligation to buy", "photoSeed":"Marcus Rashford", "source":"Sky Sports" },
+
+    { "season":"24/25", "player":"Manuel Ugarte", "type":"in", "position":"DM", "age":23, "from":"PSG", "to":"Manchester United", "fee":42, "feeMax":50.7, "status":"Permanent", "date":"Aug 2024", "notes":"£42m guaranteed, up to £50.7m with add-ons", "photoSeed":"Manuel Ugarte", "source":"Sky Sports" },
+    { "season":"24/25", "player":"Noussair Mazraoui", "type":"in", "position":"RB", "age":26, "from":"Bayern Munich", "to":"Manchester United", "fee":15, "feeMax":17, "status":"Permanent", "date":"Aug 2024", "notes":"Deal worth up to £17m", "photoSeed":"Noussair Mazraoui", "source":"ESPN" },
+    { "season":"24/25", "player":"Leny Yoro", "type":"in", "position":"CB", "age":18, "from":"Lille", "to":"Manchester United", "fee":52, "feeMax":58.9, "status":"Permanent", "date":"Jul 2024", "notes":"€62m guaranteed, up to €70m with add-ons", "photoSeed":"Leny Yoro", "source":"BBC Sport" },
+    { "season":"24/25", "player":"Mason Greenwood", "type":"out", "position":"FW", "age":22, "from":"Manchester United", "to":"Marseille", "fee":23.3, "feeMax":26.7, "status":"Permanent", "date":"Aug 2024", "notes":"€27.6m guaranteed + €4m add-ons; Man Utd hold 50% sell-on", "photoSeed":"Mason Greenwood", "source":"Goal.com" }
+  ],
+  "rumours": [
+    { "name":"Éderson (Atalanta)", "fee":"~£38m", "note":"Advanced talks reported earlier in window" },
+    { "name":"Manu Koné (Roma)", "fee":"~£35-45m", "note":"Athletic midfielder profile linked" },
+    { "name":"Sander Berge (Fulham)", "fee":"<£40m", "note":"PL-proven alternative reportedly monitored" },
+    { "name":"Jhon Lucumí (Bologna)", "fee":"~£25m (reported)", "note":"CB depth option linked" },
+    { "name":"Lewis Hall (Newcastle)", "fee":"High (undisclosed)", "note":"LB reportedly monitored" }
+  ]
+}
