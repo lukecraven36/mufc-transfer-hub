@@ -36,14 +36,17 @@ Fees and deal details are compiled from public reporting: Sky Sports, BBC Sport,
 
 Player photos are fetched at runtime from Wikipedia's public REST API (freely licensed images, no key required) and automatically fall back to a generated initials avatar if no photo is found — so the app never breaks or needs manual image hosting.
 
-## Player detail modal & live stats
+## Player detail modal & live squad info
 
-Clicking any player card opens a modal with the full transfer details plus,
-where available, live season stats (appearances/goals/assists/cards) sourced
-from football-data.org. That requires a small Cloudflare Worker to keep the
-API key off the public page — it's optional and off by default. See
-[SETUP.md](SETUP.md) for the full walkthrough; without it, cards still open
-and show the Wikipedia bio instead.
+Clicking any player card opens a modal with the full transfer details, plus
+a Wikipedia bio and, for players currently in Manchester United's squad,
+live position/nationality/shirt number/contract info from football-data.org.
+(Its free tier doesn't include match-level stats like goals/assists — see
+SETUP.md if you want those from a different source.) The football-data.org
+integration requires a small Cloudflare Worker to keep the API key off the
+public page — it's optional and off by default. See [SETUP.md](SETUP.md)
+for the full walkthrough; without it, cards still open and show the
+Wikipedia bio.
 
 ## Running locally
 

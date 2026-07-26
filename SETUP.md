@@ -1,10 +1,17 @@
-# Live Player Stats Setup (football-data.org + Cloudflare Worker)
+# Live Player Info Setup (football-data.org + Cloudflare Worker)
 
 The player cards (Ins/Outs/Loans/Headline Moves) now open a detail modal.
-For players currently in Manchester United's squad, it can show live
-appearances/goals/assists/cards from football-data.org. Everyone else
-(most Outs, historical loans) falls back to the Wikipedia bio automatically
-— no broken UI either way.
+For players currently in Manchester United's squad, it shows position,
+nationality, shirt number and contract-until date from football-data.org,
+plus the Wikipedia bio underneath. Everyone else (most Outs, historical
+loans) gets just the Wikipedia bio. No broken UI either way.
+
+**Heads up on scope:** football-data.org's free tier does not include
+match-level stats (appearances/goals/assists) — its `/persons/{id}/matches`
+endpoint returns a "paid subscriptions only" message instead of real numbers,
+confirmed by testing against the live API. So this integration is limited to
+the bio-level fields above, not season stats. See "Is there a better source
+for real stats?" below if you want actual goals/assists.
 
 This feature is **off by default** (`STATS_PROXY_URL = ''` in [app.js](app.js))
 until you complete the two steps below. Nothing else in the site depends on it.
@@ -65,8 +72,8 @@ const STATS_PROXY_URL = 'https://mufc-stats-proxy.<your-subdomain>.workers.dev';
 ```
 
 (no trailing slash). Save, reload the site, and open a player card — the
-"Live Stats" section in the modal should populate for current-squad players
-within a second or two.
+"Squad Info" section in the modal should populate for current-squad players
+within a second or two, with the Wikipedia bio underneath either way.
 
 ## How matching works (and its limits)
 
@@ -75,11 +82,22 @@ only list of players we can browse is Manchester United's own registered
 squad (`/v4/teams/66`). So:
 
 - **Players currently at United** (new signings, current loan-listed squad
-  members) get matched by name and show live stats.
+  members) get matched by name and show the football-data.org "Squad Info"
+  block above their Wikipedia bio.
 - **Players who've left** (most Outs, past loans/permanent exits) can't be
-  looked up this way — the modal automatically falls back to showing the
-  Wikipedia bio instead, with a note explaining why. This is intentional,
-  not a bug.
+  looked up this way — the modal just shows the Wikipedia bio. This is
+  intentional, not a bug.
 
 If a name match is ambiguous or fails for a current player too, it falls
 back the same way rather than showing broken or blank UI.
+
+## Is there a better source for real stats?
+
+If what you actually want is appearances/goals/assists, football-data.org's
+free tier can't deliver that — it's confirmed gated behind a paid plan. The
+best free alternative for real per-season player stats is **API-Football**
+(via RapidAPI): its free tier's player-statistics endpoint does return
+goals/assists/appearances for Premier League players, at a cost of a much
+tighter quota (100 requests/day, vs football-data's 10/minute). Swapping to
+it would mean a second signup and updating the Worker's upstream calls — say
+the word if you'd like that instead of (or alongside) the current setup.

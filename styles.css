@@ -200,7 +200,6 @@ tr:hover td { background:rgba(218,41,28,0.06); }
   .kpi-value { font-size:1.3rem; }
   .player-photo { width:52px; height:52px; }
   .modal-box { width:94%; padding:1.1rem; }
-  .modal-stats-grid { grid-template-columns:repeat(2,1fr); }
 }
 .toast {
   position:fixed; bottom:1.5rem; right:1.5rem; background:var(--mufc-red); color:#fff;
@@ -233,14 +232,5 @@ tr:hover td { background:rgba(218,41,28,0.06); }
 .modal-subtitle { font-size:0.82rem; color:var(--mufc-gray); }
 .modal-section-title { font-size:0.72rem; text-transform:uppercase; letter-spacing:0.5px; color:var(--mufc-gray); font-weight:700; margin:1rem 0 0.5rem; }
 .modal-transfer-row { display:flex; align-items:center; gap:0.5rem; font-size:0.9rem; margin-bottom:0.4rem; flex-wrap:wrap; }
-.modal-stats-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:0.7rem; }
-.modal-stat-box { background:var(--input-bg); border-radius:8px; padding:0.7rem; text-align:center; }
-.modal-stat-box .n { font-size:1.25rem; font-weight:800; color:var(--text); }
-.modal-stat-box .l { font-size:0.65rem; color:var(--mufc-gray); text-transform:uppercase; letter-spacing:0.4px; margin-top:0.15rem; }
 .modal-bio { font-size:0.85rem; color:var(--mufc-gray); line-height:1.6; }
-.modal-fallback-note {
-  margin-top:0.85rem; padding:0.7rem 0.85rem; background:var(--input-bg); border-radius:8px;
-  font-size:0.75rem; color:var(--mufc-gray); display:flex; gap:0.5rem; align-items:flex-start;
-}
-.modal-fallback-note i { color:var(--mufc-orange); margin-top:0.15rem; }
 .modal-loading { text-align:center; padding:2rem 0; color:var(--mufc-gray); font-size:0.9rem; }

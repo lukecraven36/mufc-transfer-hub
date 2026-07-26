@@ -12,11 +12,13 @@ let totalSpend = 0, totalIncome = 0, netSpend = 0;
 let filtered = [];
 let charts = {};
 
-// ==================== LIVE STATS CONFIG ====================
-// Live stats (appearances/goals/assists) come from football-data.org via a small
+// ==================== LIVE SQUAD INFO CONFIG ====================
+// For players currently in Manchester United's squad, football-data.org can supply
+// position/nationality/shirt number/contract info (its free tier doesn't include
+// match-level stats like goals/assists — see SETUP.md). Fetched via a small
 // Cloudflare Worker proxy that holds the API key privately — see stats-proxy-worker.js
 // and SETUP.md for how to sign up and deploy it. Paste your deployed Worker's URL
-// below once it's live. Leave blank to disable live stats (player cards still work,
+// below once it's live. Leave blank to disable this (player cards still work,
 // falling back to the Wikipedia bio in that case).
 const STATS_PROXY_URL = 'https://mufc-stats-proxy.lukecraven36.workers.dev';
 
@@ -445,13 +447,15 @@ function initCharts() {
   });
 }
 
-// ==================== PLAYER DETAIL MODAL + LIVE STATS ====================
-// Live stats come from football-data.org (free tier) via a Cloudflare Worker proxy
-// that holds the API key privately (see stats-proxy-worker.js). We can only reliably
-// resolve a football-data.org player id for players currently in Manchester United's
-// registered squad (that's the only "search" the free tier gives us — there's no
-// name-search endpoint). Anyone we can't match — most "Outs" and historical loans —
-// falls back to the Wikipedia bio we already fetch for photos, with a note explaining why.
+// ==================== PLAYER DETAIL MODAL ====================
+// Squad info (position/nationality/shirt number/contract) comes from football-data.org
+// (free tier) via a Cloudflare Worker proxy that holds the API key privately (see
+// stats-proxy-worker.js). We can only reliably resolve a football-data.org player id
+// for players currently in Manchester United's registered squad (that's the only
+// "search" the free tier gives us — there's no name-search endpoint, and match-level
+// stats like goals/assists aren't included on the free tier at all). Every player also
+// gets the Wikipedia bio we already fetch for photos; anyone we can't match against the
+// squad — most "Outs" and historical loans — just gets that bio, with no error shown.
 
 function escapeHtml(str) {
   return String(str ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -465,7 +469,7 @@ function normalizeName(str) {
 
 const SQUAD_CACHE_KEY = 'mufc-squad-cache-v1';
 const SQUAD_CACHE_TTL_MS = 24 * 60 * 60 * 1000; // 1 day
-const PERSON_CACHE_KEY = 'mufc-person-cache-v1';
+const PERSON_CACHE_KEY = 'mufc-person-cache-v2'; // v2: cache shape changed from {bundle} to {person}
 const PERSON_CACHE_TTL_MS = 6 * 60 * 60 * 1000; // 6 hours
 const WIKI_SUMMARY_CACHE_KEY = 'mufc-wiki-summary-cache-v1';
 const WIKI_SUMMARY_CACHE_TTL_MS = 30 * 24 * 60 * 60 * 1000; // 30 days
@@ -506,35 +510,23 @@ function findSquadMatch(t, squad) {
   return lastNameMatches.length === 1 ? lastNameMatches[0] : null;
 }
 
-async function fetchPersonBundle(personId) {
+// football-data.org's free tier never returns real match-level stats — its
+// /persons/{id}/matches endpoint responds with an explanatory string instead of
+// the aggregations object ("...only available for paid subscriptions"), for every
+// player, every time. So we only fetch the bio endpoint, which free tier does serve.
+async function fetchPersonInfo(personId) {
   let cache;
   try { cache = JSON.parse(localStorage.getItem(PERSON_CACHE_KEY)) || {}; } catch { cache = {}; }
   const cached = cache[personId];
-  if (cached && (Date.now() - cached.ts) < PERSON_CACHE_TTL_MS) return cached.bundle;
+  if (cached && (Date.now() - cached.ts) < PERSON_CACHE_TTL_MS) return cached.person;
 
   try {
-    const startYear = 2000 + parseInt(String(currentSeason).split('/')[0], 10);
-    const dateFrom = !isNaN(startYear) ? `${startYear}-07-01` : '';
-    const today = new Date().toISOString().slice(0, 10);
-    const matchesQS = dateFrom ? `?dateFrom=${dateFrom}&dateTo=${today}&limit=100` : '?limit=50';
-    const [personRes, matchesRes] = await Promise.all([
-      fetch(`${STATS_PROXY_URL}/person/${personId}`),
-      fetch(`${STATS_PROXY_URL}/person/${personId}/matches${matchesQS}`)
-    ]);
-    if (!personRes.ok) throw new Error(`HTTP ${personRes.status}`);
-    const person = await personRes.json();
-    let aggregations = null;
-    if (matchesRes.ok) {
-      const matchesJson = await matchesRes.json();
-      // Free tier returns aggregations as an explanatory string ("...only available
-      // for paid subscriptions") instead of the stats object — treat that as absent.
-      const aggRaw = matchesJson.aggregations;
-      aggregations = (aggRaw && typeof aggRaw === 'object') ? aggRaw : null;
-    }
-    const bundle = { person, aggregations };
-    cache[personId] = { bundle, ts: Date.now() };
+    const res = await fetch(`${STATS_PROXY_URL}/person/${personId}`);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const person = await res.json();
+    cache[personId] = { person, ts: Date.now() };
     try { localStorage.setItem(PERSON_CACHE_KEY, JSON.stringify(cache)); } catch { /* quota */ }
-    return bundle;
+    return person;
   } catch {
     return null;
   }
@@ -580,52 +572,36 @@ function transferDetailsHTML(t) {
   `;
 }
 
-function liveStatsHTML(bundle) {
-  const person = bundle.person || {};
-  const a = bundle.aggregations;
-  const statBoxes = a ? `
-    <div class="modal-stats-grid">
-      <div class="modal-stat-box"><div class="n">${a.matchesOnPitch ?? 0}</div><div class="l">Appearances</div></div>
-      <div class="modal-stat-box"><div class="n">${a.goals ?? 0}</div><div class="l">Goals</div></div>
-      <div class="modal-stat-box"><div class="n">${a.assists ?? 0}</div><div class="l">Assists</div></div>
-      <div class="modal-stat-box"><div class="n">${a.minutesPlayed ?? 0}</div><div class="l">Minutes</div></div>
-      <div class="modal-stat-box"><div class="n">${a.yellowCards ?? 0}</div><div class="l">Yellow Cards</div></div>
-      <div class="modal-stat-box"><div class="n">${a.redCards ?? 0}</div><div class="l">Red Cards</div></div>
-    </div>` : `<div class="modal-fallback-note"><i class="fas fa-circle-info"></i> Matched this player on football-data.org, but detailed match stats aren't available on the free API tier — showing bio info instead.</div>`;
+function squadInfoHTML(person) {
   const contractUntil = person.currentTeam?.contract?.until;
   return `
-    <div class="modal-section-title">Live Stats — ${escapeHtml(currentSeason)} (football-data.org)</div>
-    ${statBoxes}
-    <div class="modal-transfer-row" style="margin-top:0.6rem;font-size:0.78rem;color:var(--mufc-gray);">
+    <div class="modal-section-title">Squad Info (football-data.org)</div>
+    <div class="modal-transfer-row" style="font-size:0.85rem;">
       ${escapeHtml(person.position || '')}${person.nationality ? ` · ${escapeHtml(person.nationality)}` : ''}${person.shirtNumber ? ` · #${person.shirtNumber}` : ''}${contractUntil ? ` · Contract until ${escapeHtml(contractUntil)}` : ''}
     </div>
   `;
 }
 
-function fallbackBioHTML(bio, note) {
+function bioHTML(bio) {
+  if (!bio || !bio.extract) return '';
   return `
-    <div class="modal-fallback-note"><i class="fas fa-circle-info"></i> ${note}</div>
-    ${bio && bio.extract ? `<div class="modal-section-title">Background</div><div class="modal-bio">${escapeHtml(bio.extract)}${bio.pageUrl ? ` <a href="${bio.pageUrl}" target="_blank" rel="noopener">Read more on Wikipedia</a>` : ''}</div>` : ''}
+    <div class="modal-section-title">Background</div>
+    <div class="modal-bio">${escapeHtml(bio.extract)}${bio.pageUrl ? ` <a href="${bio.pageUrl}" target="_blank" rel="noopener">Read more on Wikipedia</a>` : ''}</div>
   `;
 }
 
 async function renderLiveStatsSection(t, container) {
+  let squadHTML = '';
   if (STATS_PROXY_URL) {
     const squad = await getUnitedSquad();
     const match = findSquadMatch(t, squad);
     if (match) {
-      const bundle = await fetchPersonBundle(match.id);
-      if (bundle) {
-        container.innerHTML = liveStatsHTML(bundle);
-        return;
-      }
+      const person = await fetchPersonInfo(match.id);
+      if (person) squadHTML = squadInfoHTML(person);
     }
   }
   const bio = await fetchWikipediaSummary(t.photoSeed || t.player);
-  const note = STATS_PROXY_URL
-    ? 'Live stats aren\'t available for this player (only tracked while registered to Manchester United\'s current squad on football-data.org).'
-    : 'Live stats aren\'t set up yet — showing the Wikipedia bio instead.';
-  container.innerHTML = fallbackBioHTML(bio, note);
+  container.innerHTML = squadHTML + bioHTML(bio);
 }
 
 function openPlayerModal(t) {
@@ -641,7 +617,7 @@ function openPlayerModal(t) {
       </div>
     </div>
     ${transferDetailsHTML(t)}
-    <div id="modalLiveStats"><div class="modal-loading"><i class="fas fa-spinner fa-spin"></i> Checking for live stats…</div></div>
+    <div id="modalLiveStats"><div class="modal-loading"><i class="fas fa-spinner fa-spin"></i> Loading player info…</div></div>
   `;
   hydratePhoto(document.getElementById('modalPlayerPhoto'));
 
