@@ -59,5 +59,9 @@
     { "name":"Harry Amass (Manchester United)", "type":"out", "fee":"~£6m (Utd's valuation)", "note":"Utd open to a permanent sale this summer; Championship clubs already have offers in — left-back depth surplus", "source":"The Athletic (Laurie Whitwell)" },
     { "name":"Joshua Zirkzee (linked to Juventus, two PL clubs)", "type":"out", "fee":"Undisclosed", "note":"Juventus and two other Premier League clubs have made checks on his situation; Ajax also enquired but not expected to pursue further. Exit could happen if the structure suits Utd — likely a loan with an option/obligation to buy", "source":"The Athletic (Laurie Whitwell)" }
   ],
-  "news": []
+  "news": [
+    { "headline":"Injury round-up: Martínez, De Ligt, Šeško, Ugarte and Darlow", "summary":"Lisandro Martínez picked up a thigh/muscle strain in the World Cup final but it isn't considered serious, with a return targeted for the Premier League opener after rest. Matthijs de Ligt remains out until autumn following back surgery, while Benjamin Šeško (shin) is on track and could feature in a later friendly. Manuel Ugarte faces a long-term absence with a suspected ACL injury from the World Cup, and Karl Darlow is recovering from a minor procedure.", "date":"2026-07-27" },
+    { "headline":"Confirmed: remaining pre-season fixtures and Premier League opener", "summary":"United's pre-season continues with Atlético Madrid (1 August, Stockholm), Paris Saint-Germain (8 August, Gothenburg), Leeds United (12 August, Dublin) and AC Milan (15 August, Wrocław), before the Premier League campaign opens away to Hull City on 22 August.", "date":"2026-07-25" },
+    { "headline":"United thrash Rosenborg 5-0 in Michael Carrick's first win as permanent head coach", "summary":"Goals from Shea Lacey, Joshua Zirkzee, Jacob Devaney, Harry Amass and Ethan Williams sealed a 5-0 pre-season win in Trondheim on Friday, United's second friendly of the summer. Reports highlighted improved control and tempo, with 15-year-old JJ Gabriel included in the travelling squad.", "date":"2026-07-24" }
+  ]
 }
