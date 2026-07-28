@@ -265,3 +265,87 @@ tr:hover td { background:rgba(218,41,28,0.06); }
 .modal-transfer-row { display:flex; align-items:center; gap:0.5rem; font-size:0.9rem; margin-bottom:0.4rem; flex-wrap:wrap; }
 .modal-bio { font-size:0.85rem; color:var(--mufc-gray); line-height:1.6; }
 .modal-loading { text-align:center; padding:2rem 0; color:var(--mufc-gray); font-size:0.9rem; }
+
+/* ==================== RUMOUR ACCOUNTABILITY LEDGER ==================== */
+.inline-link { color:var(--mufc-red-light); font-weight:600; text-decoration:none; border-bottom:1px dotted currentColor; }
+.inline-link:hover { color:var(--mufc-gold); }
+
+.ledger-intro p { font-size:0.85rem; line-height:1.65; color:var(--text); }
+.ledger-intro p + p { margin-top:0.7rem; }
+.ledger-method {
+  background:var(--input-bg); border-left:3px solid var(--mufc-gold);
+  padding:0.75rem 0.9rem; border-radius:6px;
+  font-size:0.8rem !important; color:var(--mufc-gray) !important;
+}
+.ledger-method strong { color:var(--text); }
+.ledger-method em { color:var(--mufc-gold); font-style:normal; font-weight:600; }
+.ledger-deadline { font-size:0.78rem !important; color:var(--mufc-gray) !important; font-style:italic; }
+
+/* Verdict badges — used on rumour cards and receipts alike */
+.verdict-badge {
+  display:inline-flex; align-items:center; gap:0.3rem; vertical-align:middle;
+  padding:0.12rem 0.45rem; border-radius:4px;
+  font-size:0.62rem; font-weight:700; text-transform:uppercase; letter-spacing:0.3px;
+  white-space:nowrap;
+}
+.verdict-correct   { background:rgba(0,200,83,0.18);  color:var(--mufc-green); }
+.verdict-partial   { background:rgba(255,145,0,0.18); color:var(--mufc-orange); }
+.verdict-incorrect { background:rgba(218,41,28,0.20); color:var(--mufc-red-light); }
+.verdict-expired   { background:rgba(160,160,160,0.16); color:var(--mufc-gray); }
+.verdict-open      { background:rgba(245,197,24,0.16); color:var(--mufc-gold); }
+
+.verdict-correct-text   { color:var(--mufc-green); font-weight:700; }
+.verdict-partial-text   { color:var(--mufc-orange); font-weight:700; }
+.verdict-incorrect-text { color:var(--mufc-red-light); font-weight:700; }
+
+.source-tag-muted { opacity:0.7; font-style:italic; }
+
+/* Track-record table */
+.ledger-table th.num, .ledger-table td.num { text-align:center; }
+.ledger-table th { cursor:default; }
+.ledger-table th:hover { color:var(--mufc-gray); }
+.ledger-table th[title] { cursor:help; text-decoration:underline dotted transparent; }
+.ledger-table th[title]:hover { color:var(--mufc-red-light); text-decoration-color:currentColor; }
+.ledger-sub { font-size:0.68rem; color:var(--mufc-gray); margin-top:0.15rem; font-weight:400; }
+.ledger-muted { color:var(--mufc-gray); }
+.ledger-footnote { font-size:0.72rem; color:var(--mufc-gray); margin-top:0.7rem; line-height:1.6; }
+
+.ledger-bar-wrap {
+  position:relative; background:var(--input-bg); border-radius:4px;
+  height:20px; min-width:104px; overflow:hidden;
+  border:1px solid var(--mufc-border);
+}
+.ledger-bar { height:100%; border-radius:3px 0 0 3px; transition:width 0.4s ease; }
+.bar-good { background:linear-gradient(90deg, #00A344, var(--mufc-green)); }
+.bar-mid  { background:linear-gradient(90deg, #C97000, var(--mufc-orange)); }
+.bar-bad  { background:linear-gradient(90deg, var(--mufc-red-dark), var(--mufc-red-light)); }
+.ledger-bar-label {
+  position:absolute; inset:0; display:flex; align-items:center; justify-content:center;
+  font-size:0.68rem; font-weight:800; color:var(--text);
+  text-shadow:0 1px 3px rgba(0,0,0,0.55);
+}
+[data-theme="light"] .ledger-bar-label { text-shadow:0 1px 2px rgba(255,255,255,0.8); }
+
+/* Receipts list */
+.receipts { display:flex; flex-direction:column; gap:0.7rem; }
+.receipt-row {
+  display:flex; gap:1rem; justify-content:space-between; align-items:flex-start;
+  background:var(--input-bg); border:1px solid var(--mufc-border);
+  border-left:3px solid var(--mufc-gray);
+  border-radius:8px; padding:0.8rem 0.95rem;
+}
+.receipt-row.correct   { border-left-color:var(--mufc-green); }
+.receipt-row.partial   { border-left-color:var(--mufc-orange); }
+.receipt-row.incorrect { border-left-color:var(--mufc-red-light); }
+.receipt-main { min-width:0; flex:1; }
+.receipt-player { font-weight:700; font-size:0.9rem; display:flex; align-items:center; gap:0.5rem; flex-wrap:wrap; }
+.receipt-claim { font-size:0.78rem; color:var(--mufc-gray); font-style:italic; margin-top:0.3rem; line-height:1.55; }
+.receipt-outcome { font-size:0.78rem; color:var(--mufc-green); margin-top:0.35rem; font-weight:600; }
+.receipt-note { font-size:0.72rem; color:var(--mufc-gray); margin-top:0.25rem; }
+.receipt-meta { text-align:right; flex-shrink:0; max-width:170px; }
+.receipt-outlet { font-size:0.76rem; font-weight:700; color:var(--text); }
+
+@media (max-width: 640px) {
+  .receipt-row { flex-direction:column; gap:0.5rem; }
+  .receipt-meta { text-align:left; max-width:none; }
+}

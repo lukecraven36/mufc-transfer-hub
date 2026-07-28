@@ -51,6 +51,10 @@ async function boot() {
 
   document.getElementById('dataDate').textContent = formatDate(DATA.meta?.lastUpdated);
 
+  // Verdicts are derived before anything renders — the rumour cards and the
+  // ledger tab both display them, so they need to exist first.
+  resolveLedger();
+
   populateSeasonFilter();
   renderKPIs();
   renderPlayerGrids();
@@ -58,6 +62,7 @@ async function boot() {
   renderTimeline();
   renderClubs();
   renderRumours();
+  renderLedger();
   renderNews();
   renderHistorySnap();
   renderSourceList();
@@ -129,13 +134,27 @@ function hydratePhoto(img) {
 }
 
 // ==================== NAV ====================
+function showSection(id) {
+  const btn = document.querySelector(`.nav-btn[data-section="${id}"]`);
+  const section = document.getElementById(id);
+  if (!btn || !section) return;
+  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+  btn.classList.add('active');
+  section.classList.add('active');
+}
+
 function bindEvents() {
   document.querySelectorAll('.nav-btn').forEach(btn => {
-    btn.addEventListener('click', () => {
-      document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
-      document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
-      btn.classList.add('active');
-      document.getElementById(btn.dataset.section).classList.add('active');
+    btn.addEventListener('click', () => showSection(btn.dataset.section));
+  });
+
+  // In-copy links that jump to another tab, e.g. Rumours -> Ledger
+  document.querySelectorAll('[data-goto]').forEach(link => {
+    link.addEventListener('click', e => {
+      e.preventDefault();
+      showSection(link.dataset.goto);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
     });
   });
 
@@ -373,19 +392,35 @@ function rumourPlayerName(fullName) {
   return String(fullName).replace(/\s*\([^)]*\)\s*$/, '').trim();
 }
 
+// Display label for a ledger entry: "Player (Club)" for incoming links,
+// "Player (to Club)" for exits. Falls back to just the name when the
+// counterparty isn't known.
+function rumourLabel(r) {
+  if (!r.club) return r.player;
+  return r.type === 'out' ? `${r.player} (to ${r.club})` : `${r.player} (${r.club})`;
+}
+
 function rumourCard(r) {
-  const seed = rumourPlayerName(r.name);
+  const seed = r.player;
   const bg = r.type === 'out' ? 'DA291C' : '00C853';
   const feeClass = r.type === 'out' ? 'fee-positive' : 'fee-negative';
+  const label = rumourLabel(r);
+  const v = r.resolution?.verdict || 'open';
+  const attribution = r.outlet
+    ? `${r.outlet}${r.journalist ? ` — ${r.journalist}` : ''}${r.via ? `, via ${r.via}` : ''}`
+    : 'No outlet recorded';
   return `
-    <div class="player-card rumour-target ${r.type === 'out' ? 'out' : 'in'}">
-      <img class="player-photo" data-name="${escapeAttr(seed)}" data-bg="${bg}" src="${avatarUrl(seed, bg)}" alt="${escapeAttr(r.name)}" loading="lazy" />
+    <div class="player-card rumour-target ${r.type === 'out' ? 'out' : 'in'}" data-rumour-id="${escapeAttr(r.id)}">
+      <img class="player-photo" data-name="${escapeAttr(seed)}" data-bg="${bg}" src="${avatarUrl(seed, bg)}" alt="${escapeAttr(label)}" loading="lazy" />
       <div class="player-info">
-        <div class="player-name">${escapeHtml(r.name)}</div>
-        <div class="player-meta">${r.type === 'out' ? 'Potential departure' : 'Linked target'}</div>
+        <div class="player-name">${escapeHtml(label)} ${verdictBadge(v)}</div>
+        <div class="player-meta">${r.type === 'out' ? 'Potential departure' : 'Linked target'}${r.position ? ` · ${escapeHtml(r.position)}` : ''}${STRENGTH_LABEL[r.claimStrength] ? ` · ${STRENGTH_LABEL[r.claimStrength]}` : ''}</div>
         <div class="player-fee ${feeClass}">${escapeHtml(r.fee || 'Undisclosed')}</div>
-        ${r.note ? `<div style="margin-top:0.35rem;font-size:0.7rem;color:var(--mufc-gray);">${escapeHtml(r.note)}</div>` : ''}
-        ${r.source ? `<div class="source-tag"><i class="fas fa-check-circle"></i> Source: ${escapeHtml(r.source)}</div>` : ''}
+        ${r.claim ? `<div style="margin-top:0.35rem;font-size:0.7rem;color:var(--mufc-gray);">${escapeHtml(r.claim)}</div>` : ''}
+        <div class="source-tag ${r.outlet ? '' : 'source-tag-muted'}">
+          <i class="fas ${r.outlet ? 'fa-check-circle' : 'fa-circle-question'}"></i>
+          ${escapeHtml(attribution)}${r.firstReported ? ` · first reported ${formatDate(r.firstReported)}` : ''}
+        </div>
       </div>
     </div>`;
 }
@@ -402,6 +437,294 @@ function renderRumours() {
   inGrid.innerHTML = insList.length ? insList.map(rumourCard).join('') : rumourEmptyState('incoming');
   outGrid.innerHTML = outsList.length ? outsList.map(rumourCard).join('') : rumourEmptyState('outgoing');
   [inGrid, outGrid].forEach(hydrateVisiblePhotos);
+}
+
+/* ==================== RUMOUR ACCOUNTABILITY LEDGER ====================
+   Every rumour is logged with who reported it, when, and how strong the
+   claim was. Once a deal happens (or the window shuts without it), each
+   entry gets a verdict — and those verdicts aggregate into a per-outlet
+   accuracy table.
+
+   The methodology matters more than the code here, because the obvious
+   naive version is unfair and would discredit the whole feature. An outlet
+   that reports "United are monitoring X" has not claimed X will sign; if
+   X doesn't sign, the outlet wasn't *wrong*. So claims are scored by the
+   strength they were actually made at:
+
+     linked    interest/monitoring only   -> if it doesn't happen: EXPIRED,
+                                             not counted against accuracy
+     talks     concrete bid/negotiation   -> if it doesn't happen: INCORRECT
+     advanced  deal agreed/imminent       -> if it doesn't happen: INCORRECT
+
+   That gives two separate, honest numbers per outlet:
+     Accuracy    — of the claims strong enough to be right or wrong, how
+                   many were right.
+     Signal rate — of everything they reported, how much became real. This
+                   is where spray-and-pray outlets show up: they can hold a
+                   perfect accuracy score while converting almost nothing.
+   ==================================================================== */
+
+const STRENGTH_LABEL = {
+  linked: 'Linked',
+  talks: 'In talks',
+  advanced: 'Advanced',
+};
+
+// Only these claim strengths can be judged "wrong" when a deal fails.
+const STRICT_STRENGTHS = new Set(['talks', 'advanced']);
+
+const VERDICT_META = {
+  correct:   { label: 'Correct',   cls: 'verdict-correct',   icon: 'fa-circle-check' },
+  partial:   { label: 'Partial',   cls: 'verdict-partial',   icon: 'fa-circle-half-stroke' },
+  incorrect: { label: 'Incorrect', cls: 'verdict-incorrect', icon: 'fa-circle-xmark' },
+  expired:   { label: 'No move',   cls: 'verdict-expired',   icon: 'fa-circle-minus' },
+  open:      { label: 'Open',      cls: 'verdict-open',      icon: 'fa-clock' },
+};
+
+function verdictBadge(v) {
+  const m = VERDICT_META[v] || VERDICT_META.open;
+  return `<span class="verdict-badge ${m.cls}"><i class="fas ${m.icon}"></i> ${m.label}</span>`;
+}
+
+// Has the window this rumour belongs to closed? Until it has, an unfulfilled
+// rumour is simply still open — not a miss.
+function windowClosed() {
+  const deadline = DATA?.meta?.windowDeadline;
+  if (!deadline) return false;
+  return startOfDay(new Date()) > startOfDay(new Date(deadline + 'T00:00:00'));
+}
+
+// Find a completed transfer matching this rumour's player.
+function matchTransfer(r) {
+  const target = normalizeName(r.player);
+  if (!target) return null;
+  return current.find(t => normalizeName(t.player) === target) || null;
+}
+
+/* Derive a verdict for each rumour.
+
+   A manually-set verdict in data.json always wins — auto-resolution is a
+   convenience for the common cases, not an authority. Everything else is
+   inferred:
+     - matched a completed transfer, counterparty club as reported -> correct
+     - matched, but the club or deal type differs materially       -> partial
+     - no match, window still open                                 -> open
+     - no match, window closed, weak claim                         -> expired
+     - no match, window closed, strong claim                       -> incorrect */
+function deriveVerdict(r) {
+  const manual = r.resolution?.verdict;
+  if (manual && manual !== 'open') {
+    return { ...r.resolution, source: 'manual' };
+  }
+
+  const t = matchTransfer(r);
+  if (t) {
+    const counterparty = t.type === 'in' ? t.from : t.to;
+    const clubMatches = !r.club ||
+      normalizeName(counterparty).includes(normalizeName(r.club)) ||
+      normalizeName(r.club).includes(normalizeName(counterparty));
+    const directionMatches = (r.type === 'in') === (t.type === 'in');
+    const verdict = clubMatches && directionMatches ? 'correct' : 'partial';
+    return {
+      verdict,
+      resolvedOn: null,
+      outcome: `${t.type === 'in' ? 'Signed from' : 'Left for'} ${counterparty}` +
+               (t.fee ? ` — £${t.fee}m` : ' — free'),
+      matchedTransfer: t._idx,
+      note: verdict === 'partial'
+        ? `Move happened but not as reported (reported ${r.club || 'unspecified club'}, actual ${counterparty}).`
+        : null,
+      source: 'auto',
+    };
+  }
+
+  if (!windowClosed()) {
+    return { verdict: 'open', resolvedOn: null, outcome: null, matchedTransfer: null, note: null, source: 'auto' };
+  }
+
+  // A claim with no named outlet can't be held against anyone, so it never
+  // resolves to "incorrect" no matter how strong it was — there is nobody to
+  // charge it to. It closes as a non-event instead.
+  const attributed = !r.unattributed && !!r.outlet;
+  const strict = attributed && STRICT_STRENGTHS.has(r.claimStrength);
+  return {
+    verdict: strict ? 'incorrect' : 'expired',
+    resolvedOn: DATA?.meta?.windowDeadline || null,
+    outcome: 'No move materialised before the window closed',
+    matchedTransfer: null,
+    note: strict ? null
+      : attributed ? 'Reported as interest only, so not scored against accuracy.'
+      : 'No outlet recorded, so this claim is not scored.',
+    source: 'auto',
+  };
+}
+
+// Attach resolved verdicts to every rumour. Called once at boot.
+function resolveLedger() {
+  rumours.forEach(r => {
+    r.resolution = { ...(r.resolution || {}), ...deriveVerdict(r) };
+  });
+}
+
+/* Aggregate per outlet.
+     accuracy    = correct / (correct + partial + incorrect), partial counts half
+     signalRate  = (correct + partial) / all resolved entries
+   Unattributed entries (no named outlet) are excluded entirely — they can't
+   fairly be credited or blamed to anyone. */
+function ledgerByOutlet() {
+  const map = new Map();
+
+  rumours.forEach(r => {
+    if (r.unattributed || !r.outlet) return;
+    const key = r.outlet;
+    if (!map.has(key)) {
+      map.set(key, {
+        outlet: key,
+        journalists: new Set(),
+        total: 0, correct: 0, partial: 0, incorrect: 0, expired: 0, open: 0,
+      });
+    }
+    const row = map.get(key);
+    row.total++;
+    if (r.journalist) row.journalists.add(r.journalist);
+    const v = r.resolution?.verdict || 'open';
+    if (row[v] !== undefined) row[v]++;
+  });
+
+  const rows = [...map.values()].map(row => {
+    const judged = row.correct + row.partial + row.incorrect;
+    const resolved = judged + row.expired;
+    return {
+      ...row,
+      journalists: [...row.journalists],
+      judged,
+      resolved,
+      accuracy: judged ? (row.correct + row.partial * 0.5) / judged : null,
+      signalRate: resolved ? (row.correct + row.partial) / resolved : null,
+    };
+  });
+
+  // Most-judged first, then most accurate — an outlet with one lucky hit
+  // shouldn't top a table above one with a real track record.
+  rows.sort((a, b) => (b.judged - a.judged) || ((b.accuracy ?? -1) - (a.accuracy ?? -1)) || (b.total - a.total));
+  return rows;
+}
+
+function ledgerTotals() {
+  const t = { total: rumours.length, correct: 0, partial: 0, incorrect: 0, expired: 0, open: 0, unattributed: 0 };
+  rumours.forEach(r => {
+    if (r.unattributed || !r.outlet) t.unattributed++;
+    const v = r.resolution?.verdict || 'open';
+    if (t[v] !== undefined) t[v]++;
+  });
+  return t;
+}
+
+function pct(n) {
+  return n === null || n === undefined ? '—' : `${Math.round(n * 100)}%`;
+}
+
+function accuracyBar(v) {
+  if (v === null || v === undefined) return '<span class="ledger-muted">—</span>';
+  const p = Math.round(v * 100);
+  const tone = p >= 70 ? 'bar-good' : p >= 40 ? 'bar-mid' : 'bar-bad';
+  return `<div class="ledger-bar-wrap" role="img" aria-label="${p} percent">
+      <div class="ledger-bar ${tone}" style="width:${p}%"></div>
+      <span class="ledger-bar-label">${p}%</span>
+    </div>`;
+}
+
+function renderLedgerTable() {
+  const rows = ledgerByOutlet();
+  const body = document.getElementById('ledgerBody');
+  if (!body) return;
+
+  if (!rows.length) {
+    body.innerHTML = `<tr><td colspan="8" class="empty-state">No attributed rumours logged yet.</td></tr>`;
+    return;
+  }
+
+  body.innerHTML = rows.map(r => `
+    <tr>
+      <td>
+        <strong>${escapeHtml(r.outlet)}</strong>
+        ${r.journalists.length ? `<div class="ledger-sub">${escapeHtml(r.journalists.join(', '))}</div>` : ''}
+      </td>
+      <td class="num">${r.total}</td>
+      <td class="num verdict-correct-text">${r.correct}</td>
+      <td class="num verdict-partial-text">${r.partial}</td>
+      <td class="num verdict-incorrect-text">${r.incorrect}</td>
+      <td class="num ledger-muted">${r.expired}</td>
+      <td>${accuracyBar(r.accuracy)}</td>
+      <td>${accuracyBar(r.signalRate)}</td>
+    </tr>`).join('');
+}
+
+function renderLedgerSummary() {
+  const t = ledgerTotals();
+  const el = document.getElementById('ledgerSummary');
+  if (!el) return;
+  const judged = t.correct + t.partial + t.incorrect;
+  const overall = judged ? (t.correct + t.partial * 0.5) / judged : null;
+
+  const cards = [
+    { label: 'Rumours logged', value: t.total, sub: `${t.unattributed} unattributed` },
+    { label: 'Still open', value: t.open, sub: windowClosed() ? 'window closed' : 'window open' },
+    { label: 'Confirmed correct', value: t.correct, sub: `${t.partial} partial` },
+    { label: 'Overall accuracy', value: pct(overall), sub: `${judged} judged claim${judged === 1 ? '' : 's'}` },
+  ];
+
+  el.innerHTML = cards.map(c => `
+    <div class="kpi-card">
+      <div class="kpi-label">${escapeHtml(c.label)}</div>
+      <div class="kpi-value">${escapeHtml(String(c.value))}</div>
+      <div class="kpi-sub">${escapeHtml(c.sub)}</div>
+    </div>`).join('');
+}
+
+// The receipts list: every entry that has actually been judged, newest first.
+function renderLedgerReceipts() {
+  const el = document.getElementById('ledgerReceipts');
+  if (!el) return;
+
+  // Only attributed entries appear here — a receipt with no outlet on it
+  // isn't a receipt, and putting one in this list implies blame it can't carry.
+  const judged = rumours
+    .filter(r => !r.unattributed && r.outlet)
+    .filter(r => ['correct', 'partial', 'incorrect'].includes(r.resolution?.verdict))
+    .sort((a, b) => String(b.firstReported || '').localeCompare(String(a.firstReported || '')));
+
+  if (!judged.length) {
+    el.innerHTML = `<div class="empty-state">Nothing resolved yet. Verdicts appear here as deals complete, and automatically at the window deadline (${formatDate(DATA?.meta?.windowDeadline)}) for anything that didn't happen.</div>`;
+    return;
+  }
+
+  el.innerHTML = judged.map(r => `
+    <div class="receipt-row ${r.resolution.verdict}">
+      <div class="receipt-main">
+        <div class="receipt-player">${escapeHtml(rumourLabel(r))} ${verdictBadge(r.resolution.verdict)}</div>
+        <div class="receipt-claim">“${escapeHtml(r.claim || 'No claim recorded')}”</div>
+        ${r.resolution.outcome ? `<div class="receipt-outcome"><i class="fas fa-arrow-right-long"></i> ${escapeHtml(r.resolution.outcome)}</div>` : ''}
+        ${r.resolution.note ? `<div class="receipt-note">${escapeHtml(r.resolution.note)}</div>` : ''}
+      </div>
+      <div class="receipt-meta">
+        <div class="receipt-outlet">${escapeHtml(r.outlet || 'Unattributed')}</div>
+        ${r.journalist ? `<div class="ledger-sub">${escapeHtml(r.journalist)}</div>` : ''}
+        <div class="ledger-sub">${r.firstReported ? formatDate(r.firstReported) : 'date not recorded'}</div>
+      </div>
+    </div>`).join('');
+}
+
+function renderLedger() {
+  renderLedgerSummary();
+  renderLedgerTable();
+  renderLedgerReceipts();
+  const note = document.getElementById('ledgerDeadlineNote');
+  if (note) {
+    note.textContent = windowClosed()
+      ? 'Window closed — unfulfilled claims have been resolved.'
+      : `Window open until ${formatDate(DATA?.meta?.windowDeadline)}. Unfulfilled links stay "open" until then.`;
+  }
 }
 
 // ==================== LATEST NEWS ====================
