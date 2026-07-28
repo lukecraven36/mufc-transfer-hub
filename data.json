@@ -1,6 +1,6 @@
 {
   "meta": {
-    "lastUpdated": "2026-07-26",
+    "lastUpdated": "2026-07-28",
     "currentSeason": "26/27",
     "windowDeadline": "2026-09-01",
     "note": "Fees are guaranteed/base amounts unless noted; feeMax includes reported add-ons where disclosed. Figures compiled from public reporting and may be revised as outlets update details.",
@@ -37,7 +37,9 @@
     { "season":"24/25", "player":"Manuel Ugarte", "type":"in", "position":"DM", "age":23, "from":"PSG", "to":"Manchester United", "fee":42, "feeMax":50.7, "status":"Permanent", "date":"Aug 2024", "notes":"£42m guaranteed, up to £50.7m with add-ons", "photoSeed":"Manuel Ugarte", "source":"Sky Sports" },
     { "season":"24/25", "player":"Noussair Mazraoui", "type":"in", "position":"RB", "age":26, "from":"Bayern Munich", "to":"Manchester United", "fee":15, "feeMax":17, "status":"Permanent", "date":"Aug 2024", "notes":"Deal worth up to £17m", "photoSeed":"Noussair Mazraoui", "source":"ESPN" },
     { "season":"24/25", "player":"Leny Yoro", "type":"in", "position":"CB", "age":18, "from":"Lille", "to":"Manchester United", "fee":52, "feeMax":58.9, "status":"Permanent", "date":"Jul 2024", "notes":"€62m guaranteed, up to €70m with add-ons", "photoSeed":"Leny Yoro", "source":"BBC Sport" },
-    { "season":"24/25", "player":"Mason Greenwood", "type":"out", "position":"FW", "age":22, "from":"Manchester United", "to":"Marseille", "fee":23.3, "feeMax":26.7, "status":"Permanent", "date":"Aug 2024", "notes":"€27.6m guaranteed + €4m add-ons; Man Utd hold 50% sell-on", "photoSeed":"Mason Greenwood", "source":"Goal.com" }
+    { "season":"24/25", "player":"Mason Greenwood", "type":"out", "position":"FW", "age":22, "from":"Manchester United", "to":"Marseille", "fee":23.3, "feeMax":26.7, "status":"Permanent", "date":"Aug 2024", "notes":"€27.6m guaranteed + €4m add-ons; Man Utd hold 50% sell-on", "photoSeed":"Mason Greenwood", "source":"Goal.com" },
+
+    { "season":"26/27", "player":"Kit Margetson", "type":"in", "position":"GK", "age":20, "from":"Swansea City", "to":"Manchester United", "fee":0, "feeMax":0, "status":"Permanent", "date":"Jul 2026", "notes":"Wales U21 international; progressed through Swansea's academy from U15 level, 34 appearances (10 clean sheets) on loan at Connah's Quay Nomads in 2025-26. Swansea received development compensation for his exit — amount undisclosed, joins United's U21 squad.", "photoSeed":"Kit Margetson", "source":"Manchester United (official)" }
   ],
   "rumours": [
     { "name":"Manu Koné (Roma)", "type":"in", "fee":"~£35-45m", "note":"Athletic midfielder profile linked" },
@@ -53,6 +55,9 @@
     { "name":"Danilo (Botafogo)", "type":"in", "fee":"Undisclosed", "note":"Utd and Newcastle interested; other clubs have bid ~£25m for player", "source":"Sky Sports Paper Talk, via Daily Mail (23 Jul 2026)" },
     { "name":"Warren Zaire-Emery (PSG)", "type":"in", "fee":"~£51m (€60m, reported)", "note":"United considering a bid for the France U21 midfielder; PSG want to keep him", "source":"Sky Sports Paper Talk, via Daily Express (21 Jul 2026)" },
     { "name":"Ismaila Sarr (Crystal Palace)", "type":"in", "fee":"Undisclosed", "note":"Enquiry made over Sarr's availability after 21-goal Conference League-winning season; not seen as a top priority target", "source":"Sky Sports Paper Talk, via The Sun, citing reports in France (21 Jul 2026)" },
-    { "name":"Joshua Zirkzee (to Juventus)", "type":"out", "fee":"~€35-40m (reported valuation, undisclosed exact terms)", "note":"Zirkzee has given green light to Juventus move; Juventus want a loan with buy option, Utd prefer permanent sale — deal structure unresolved", "source":"ESPN (Jul 2026); also reported by Sky Sports News" }
-  ]
+    { "name":"Joshua Zirkzee (to Juventus)", "type":"out", "fee":"~€35-40m (reported valuation, undisclosed exact terms)", "note":"Zirkzee has given green light to Juventus move; Juventus want a loan with buy option, Utd prefer permanent sale — deal structure unresolved", "source":"ESPN (Jul 2026); also reported by Sky Sports News" },
+    { "name":"Harry Amass (Manchester United)", "type":"out", "fee":"~£6m (Utd's valuation)", "note":"Utd open to a permanent sale this summer; Championship clubs already have offers in — left-back depth surplus", "source":"The Athletic (Laurie Whitwell)" },
+    { "name":"Joshua Zirkzee (linked to Juventus, two PL clubs)", "type":"out", "fee":"Undisclosed", "note":"Juventus and two other Premier League clubs have made checks on his situation; Ajax also enquired but not expected to pursue further. Exit could happen if the structure suits Utd — likely a loan with an option/obligation to buy", "source":"The Athletic (Laurie Whitwell)" }
+  ],
+  "news": []
 }

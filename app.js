@@ -6,6 +6,7 @@
 let DATA = null;      // raw parsed data.json
 let transfers = [];   // DATA.transfers
 let rumours = [];     // DATA.rumours
+let news = [];        // DATA.news
 let currentSeason = "";
 let current = [], ins = [], outs = [], loans = [];
 let totalSpend = 0, totalIncome = 0, netSpend = 0;
@@ -37,6 +38,7 @@ async function boot() {
   transfers = DATA.transfers || [];
   transfers.forEach((t, i) => { t._idx = i; });
   rumours = DATA.rumours || [];
+  news = DATA.news || [];
   currentSeason = DATA.meta?.currentSeason || (transfers[0] && transfers[0].season) || "";
 
   current = transfers.filter(t => t.season === currentSeason);
@@ -56,6 +58,7 @@ async function boot() {
   renderTimeline();
   renderClubs();
   renderRumours();
+  renderNews();
   renderHistorySnap();
   renderSourceList();
   initCharts();
@@ -211,10 +214,23 @@ function renderKPIs() {
 }
 
 // ==================== PLAYER CARDS ====================
+// fee === 0 covers three different situations that must not render identically:
+// a genuine free/released move, an actual loan, or a permanent deal where a fee
+// was paid but never disclosed (e.g. academy/development compensation). Status
+// text and type distinguish the first two; anything left over is "undisclosed",
+// not "Free" — showing that as a free transfer would misrepresent the deal.
+function isFreeOrReleasedStatus(t) {
+  const s = (t.status || '').toLowerCase();
+  return s.includes('free') || s.includes('released');
+}
+function feeDisplayText(t) {
+  if (t.fee > 0) return `£${t.fee}m${t.feeMax > t.fee ? `–${t.feeMax}m` : ''}`;
+  if (t.type === 'loan') return 'Loan';
+  return isFreeOrReleasedStatus(t) ? 'Free' : 'Undisclosed fee';
+}
+
 function playerCard(t) {
-  const feeText = t.fee === 0
-    ? (t.status.toLowerCase().includes('free') || t.status.toLowerCase().includes('released') ? 'Free' : 'Loan')
-    : `£${t.fee}m${t.feeMax > t.fee ? `–${t.feeMax}m` : ''}`;
+  const feeText = feeDisplayText(t);
   const feeClass = t.type === 'in' ? 'fee-negative' : (t.fee > 0 ? 'fee-positive' : 'fee-zero');
   const bg = t.type === 'in' ? '00C853' : (t.type === 'out' ? 'DA291C' : 'FF9100');
   const seed = t.photoSeed || t.player;
@@ -295,7 +311,7 @@ function renderMasterTable() {
       <td>${t.age ?? '—'}</td>
       <td><span class="club-tag">${t.from}</span></td>
       <td><span class="club-tag">${t.to}</span></td>
-      <td class="${t.fee > 0 ? (t.type === 'in' ? 'fee-negative' : 'fee-positive') : 'fee-zero'}">${t.fee === 0 ? 'Free' : '£' + t.fee + 'm' + (t.feeMax > t.fee ? `–${t.feeMax}m` : '')}</td>
+      <td class="${t.fee > 0 ? (t.type === 'in' ? 'fee-negative' : 'fee-positive') : 'fee-zero'}">${feeDisplayText(t)}</td>
       <td>${t.status}</td>
       <td class="source-tag">${t.source || '—'}</td>
     </tr>`).join('');
@@ -327,8 +343,12 @@ function renderTimeline() {
 }
 
 function describeTransfer(t) {
-  if (t.type === 'in') return `${t.player} signs from ${t.from}${t.fee > 0 ? ` (£${t.fee}m${t.feeMax > t.fee ? `–${t.feeMax}m` : ''})` : ' (free)'}`;
-  if (t.type === 'out') return `${t.player} departs to ${t.to}${t.fee > 0 ? ` (£${t.fee}m${t.feeMax > t.fee ? `–${t.feeMax}m` : ''})` : ' (released)'}`;
+  function feeParen(freeWord) {
+    if (t.fee > 0) return ` (£${t.fee}m${t.feeMax > t.fee ? `–${t.feeMax}m` : ''})`;
+    return isFreeOrReleasedStatus(t) ? ` (${freeWord})` : ' (fee undisclosed)';
+  }
+  if (t.type === 'in') return `${t.player} signs from ${t.from}${feeParen('free')}`;
+  if (t.type === 'out') return `${t.player} departs to ${t.to}${feeParen('released')}`;
   return `${t.player} — ${t.status.toLowerCase()} to ${t.to}`;
 }
 
@@ -382,6 +402,50 @@ function renderRumours() {
   inGrid.innerHTML = insList.length ? insList.map(rumourCard).join('') : rumourEmptyState('incoming');
   outGrid.innerHTML = outsList.length ? outsList.map(rumourCard).join('') : rumourEmptyState('outgoing');
   [inGrid, outGrid].forEach(hydrateVisiblePhotos);
+}
+
+// ==================== LATEST NEWS ====================
+// Only a date (not a time) is stored per item, so "relative time" is approximated
+// to whole days — that's the resolution the data actually supports.
+function startOfDay(d) { return new Date(d.getFullYear(), d.getMonth(), d.getDate()); }
+
+function daysAgo(dateStr) {
+  const d = new Date(dateStr + 'T00:00:00');
+  if (isNaN(d)) return null;
+  const today = startOfDay(new Date());
+  return Math.round((today - startOfDay(d)) / (24 * 60 * 60 * 1000));
+}
+
+function relativeTime(dateStr) {
+  const diff = daysAgo(dateStr);
+  if (diff === null) return dateStr;
+  if (diff <= 0) return 'Today';
+  if (diff === 1) return '1 day ago';
+  return `${diff} days ago`;
+}
+
+function newsItemHTML(item, isPinned) {
+  return `
+    <div class="news-item${isPinned ? ' pinned' : ''}">
+      ${isPinned ? '<div class="news-just-in">Just In</div>' : ''}
+      <div class="news-headline">${escapeHtml(item.headline)}</div>
+      <div class="news-meta">${escapeHtml(relativeTime(item.date))}${item.source ? ` · ${escapeHtml(item.source)}` : ''}</div>
+      <div class="news-summary">${escapeHtml(item.summary)}</div>
+    </div>`;
+}
+
+function renderNews() {
+  const feed = document.getElementById('newsFeed');
+  const recent = news
+    .filter(n => { const d = daysAgo(n.date); return d !== null && d >= 0 && d <= 5; })
+    .sort((a, b) => new Date(b.date) - new Date(a.date));
+
+  if (!recent.length) {
+    feed.innerHTML = '<div class="empty-state">No breaking news right now.</div>';
+    return;
+  }
+  const [pinned, ...rest] = recent;
+  feed.innerHTML = newsItemHTML(pinned, true) + rest.map(n => newsItemHTML(n, false)).join('');
 }
 
 // ==================== SEASON AGGREGATES (derived from transfers, not hardcoded) ====================
@@ -592,9 +656,7 @@ async function fetchWikipediaSummary(name) {
 }
 
 function transferDetailsHTML(t) {
-  const feeText = t.fee === 0
-    ? (t.status.toLowerCase().includes('free') || t.status.toLowerCase().includes('released') ? 'Free' : 'Loan')
-    : `£${t.fee}m${t.feeMax > t.fee ? `–${t.feeMax}m` : ''}`;
+  const feeText = feeDisplayText(t);
   return `
     <div class="modal-section-title">Transfer Details</div>
     <div class="modal-transfer-row"><span class="club-tag">${escapeHtml(t.from)}</span><span class="arrow">→</span><span class="club-tag">${escapeHtml(t.to)}</span></div>
